@@ -1,0 +1,134 @@
+resources:
+  repositories:
+  - repository: Korzh.EasyQuery.Legacy
+    type: git
+    name: Korzh.EasyQuery.Legacy
+    trigger:
+      branches:
+        include:
+        - main
+        - prerelease/*
+  - repository: Pipelines
+    type: git
+    name: Pipelines
+    trigger: none
+
+variables:
+- group: Artifacts
+- group: ServiceConnections
+- group: Snyk
+- name: solution
+  value: Korzh.EasyQuery.Legacy.sln
+- name: buildConfiguration
+  value: Debug
+- name: projectKey
+  value: BB8_Korzh.EasyQuery.Legacy_AYP29Q1rIihemu6-HAJA
+- name: buildNumberPrefix
+  value: Korzh.EasyQuery.Legacy
+- name: sonarQubeConnection
+  value: $(ServiceConnections.SonarQubeKorzh.EasyQuery.Legacy)
+- name: breakSonarQubefailure
+  value: false
+- name: snkyOrganizationId
+  value: $(Snyk.OrgIdMyPresidio)
+
+stages:
+- stage: SetBuildNumber
+  displayName: Set Build Number
+  jobs:
+
+  - ${{ if ne(variables['Build.Reason'], 'PullRequest') }}:
+    - job:
+      displayName: Set Build Number
+      pool:
+        vmImage: ubuntu-latest
+      steps:
+      - checkout: Korzh.EasyQuery.Legacy
+      - template: Artifacts\_Templates\setBuildId.yml@Pipelines
+        parameters:
+          buildSourceBranch: $(Build.SourceBranch)
+          buildNumberPrefix: $(buildNumberPrefix)
+          buildNumber: $(Build.BuildNumber)
+  - ${{ else }}:
+    - job:
+      displayName: Set Build Number
+      pool:
+        vmImage: ubuntu-latest
+      steps:
+      - checkout: Korzh.EasyQuery.Legacy
+      - template: Artifacts\_Templates\setBuildId.yml@Pipelines
+        parameters:
+          buildSourceBranch: $(Build.SourceBranch)
+          buildNumberPrefix: $(buildNumberPrefix)
+          buildNumber: $(Build.BuildNumber)
+          pullRequestId: $(System.PullRequest.PullRequestId)
+
+- stage: CodeAnalysis
+  displayName: Code Analysis
+  jobs:
+  - job:
+    displayName: Run Snyk Scan
+    pool:
+      vmImage: windows-latest
+    steps:
+    - checkout: Korzh.EasyQuery.Legacy
+    - template: SnykScanners/_Templates/snyk.yml@Pipelines
+      parameters:
+       snykConnection: $(ServiceConnections.SnykAuthentication)
+       solution: $(solution)
+       buildConfiguration: $(buildConfiguration)
+       vstsFeed: $(Artifacts.FeedId)
+       snkyOrganizationId: $(snkyOrganizationId)
+
+  - ${{ if ne(variables['Build.Reason'], 'PullRequest') }}:
+    - job:
+      displayName: Run SonarQube Analysis
+      pool:
+        vmImage: windows-latest
+      steps:
+      - checkout: Korzh.EasyQuery.Legacy
+      - template: SonarQubeScanners/_Templates/sonarQube.yml@Pipelines
+        parameters:
+          sonarQubeConnection: $(sonarQubeConnection)
+          solution: $(solution)
+          buildConfiguration: $(buildConfiguration)
+          projectKey: $(projectKey)
+          vstsFeed: $(Artifacts.FeedId)
+          breakSonarQubefailure: '${{ variables.breakSonarQubefailure }}'
+  - ${{ else }}:
+    - job:
+      displayName: Run SonarQube Analysis
+      pool:
+        vmImage: windows-latest
+      steps:
+      - checkout: Korzh.EasyQuery.Legacy
+      - template: SonarQubeScanners/_Templates/sonarQube.yml@Pipelines
+        parameters:
+          sonarQubeConnection: $(sonarQubeConnection)
+          solution: $(solution)
+          buildConfiguration: $(buildConfiguration)
+          projectKey: $(projectKey)
+          vstsFeed: $(Artifacts.FeedId)
+          breakSonarQubefailure: '${{ variables.breakSonarQubefailure }}'
+          prId: $(System.PullRequest.PullRequestId)
+          prSourceBranch: $(System.PullRequest.SourceBranch)
+          prTargetBranch: $(System.PullRequest.TargetBranch)
+
+- ${{ if ne(variables['Build.Reason'], 'PullRequest') }}:
+  - stage: CreatePackage
+    displayName: Create Package
+    jobs:
+    - job:
+      displayName: Create Package
+      pool:
+        vmImage: windows-latest
+      steps:
+      - checkout: Korzh.EasyQuery.Legacy
+      - template: Artifacts\_Templates\package.yml@Pipelines
+        parameters:
+          solution: $(solution)
+          Project: 'Korzh.EasyQuery.Legacy\Korzh.EasyQuery.Legacy.csproj'
+          buildConfiguration: $(buildConfiguration)
+          artifactStagingDirectory: $(Build.ArtifactStagingDirectory)
+          defaultWorkingDirectory: '$(System.DefaultWorkingDirectory)'
+          vstsFeed: $(Artifacts.FeedId)

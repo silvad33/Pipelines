@@ -1,0 +1,146 @@
+# https://aka.ms/yaml
+
+parameters:
+- name: buildId
+  type: string
+  default: ''
+- name: accessToken
+  type: string
+  default: ''
+- name: commitId
+  type: string
+  default: ''
+- name: azureDevOpsOrg
+  type: string
+  default: ''
+- name: azureDevOpsOrgId
+  type: string
+  default: ''
+- name: projectName
+  type: string
+  default: ''
+- name: projectId
+  type: string
+  default: ''
+- name: repoName
+  type: string
+  default: ''
+- name: buildSourceBranch
+  type: string
+  default: ''
+- name: pullRequestId
+  type: string
+  default: ''
+
+steps:
+- task: PowerShell@2
+  displayName: Associate Work Items
+  inputs:
+    targetType: inline
+    pwsh: true
+    script: |
+      function AssociateWorkItemByWorkItem {
+        param (
+          $workItemId,
+          $requestHeader,
+          $azureDevOpsOrg,
+          $projectName
+        )
+
+        $buildId = "${{parameters.buildId}}"
+        $buildUpdateBody = "[
+          {
+            ""op"": ""add"",
+            ""path"": ""/relations/-"",
+            ""value"": {
+              ""rel"": ""ArtifactLink"",
+              ""url"": ""vstfs:///Build/Build/${buildId}"",
+              ""attributes"": {
+                ""name"": ""Integrated in build""
+              }
+            }
+          }
+        ]"
+
+        $updateWorkItemurl = "https://dev.azure.com/${azureDevOpsOrg}/${projectName}/_apis/wit/workitems/${workItemId}?api-version=6.0"
+        Try {
+          Invoke-RestMethod -Uri $updateWorkItemurl -Method Patch -ContentType "application/json-patch+json" -Headers $requestHeader -Body $buildUpdateBody
+        } Catch { }
+      }
+
+      function AssociateWorkItemByCommit {
+        param (
+          $commitId,
+          $requestHeader,
+          $azureDevOpsOrg,
+          $azureDevOpsOrgId,
+          $projectName,
+          $projectId
+        )
+
+        $artifactQuery = "vstfs:///Git/Commit/$azureDevOpsOrgId%2F$projectId%2F$commitId"
+        $artifactQueryBody = "{""artifactUris"": [""$artifactQuery""]}"
+
+        $getWorkItemurl = "https://dev.azure.com/${azureDevOpsOrg}/${projectName}/_apis/wit/artifacturiquery?api-version=7.0"
+        $workItems = Invoke-RestMethod -Uri $getWorkItemurl -Method Post -ContentType "application/json" -Headers $requestHeader -Body $artifactQueryBody
+
+        foreach ($workItem in $workItems.artifactUrisQueryResult.$artifactQuery){
+          $workItemId = $workItem.id
+
+          AssociateWorkItemByWorkItem `
+            -workItemId $workItemId `
+            -requestHeader $header `
+            -azureDevOpsOrg $azureDevOpsOrg `
+            -projectName $projectName
+        }
+      }
+
+      $secret = "${{parameters.accessToken}}"
+      $token = [System.Convert]::ToBase64String([System.Text.Encoding]::ASCII.GetBytes(":$($secret)"))
+      $header = @{authorization = "Basic $token"}
+
+      $commitId = "${{parameters.commitId}}"
+      $azureDevOpsOrg = "${{parameters.azureDevOpsOrg}}"
+      $azureDevOpsOrgId = "${{parameters.azureDevOpsOrgId}}"
+      $projectName = "${{parameters.projectName}}"
+      $projectId = "${{parameters.projectId}}"
+      $repoName = "${{parameters.repoName}}"
+
+      AssociateWorkItemByCommit `
+        -commitId $commitId `
+        -requestHeader $header `
+        -azureDevOpsOrg $azureDevOpsOrg `
+        -azureDevOpsOrgId $azureDevOpsOrgId `
+        -projectName $projectName `
+        -projectId $projectId
+
+      $buildId = "${{parameters.buildId}}"
+      $buildWorkItemsUrl = "https://dev.azure.com/${azureDevOpsOrg}/${projectName}/_apis/build/builds/${buildId}/workitems?api-version=5.0"
+      $workItems = Invoke-RestMethod -Uri $buildWorkItemsUrl -Method Get -ContentType "application/json" -Headers $header
+
+      $workItems.value | ForEach-Object {
+        $workItemId = $_.id
+
+        AssociateWorkItemByWorkItem `
+          -workItemId $workItemId `
+          -requestHeader $header `
+          -azureDevOpsOrg $azureDevOpsOrg `
+          -projectName $projectName
+      }
+
+      $sourceBranch = "${{parameters.buildSourceBranch}}"
+      if ($sourceBranch -like "*pull*") {
+        $prNum = "${{parameters.pullRequestId}}"
+        $getPRWorkItemsUrl = "https://dev.azure.com/${azureDevOpsOrg}/${projectName}/_apis/git/repositories/${repoName}/pullRequests/${prNum}/workitems?api-version=7.0"
+        $prWorkItems = Invoke-RestMethod -Uri $getPRWorkItemsUrl -Method Get -ContentType "application/json" -Headers $header
+
+        $prWorkItems.value | ForEach-Object {
+          $prWorkItemId = $_.id
+
+          AssociateWorkItemByWorkItem `
+            -workItemId $prWorkItemId `
+            -requestHeader $header `
+            -azureDevOpsOrg $azureDevOpsOrg `
+            -projectName $projectName
+        }
+      }

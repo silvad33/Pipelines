@@ -1,0 +1,36 @@
+# https://aka.ms/yaml
+
+parameters:
+- name: artifactStagingDirectory
+  type: string
+  default: ''
+
+steps:
+
+- task: PowerShell@2
+  displayName: Update 4.5 Projects to 4.7.2
+  inputs:
+    targetType: inline
+    pwsh: false
+    script: |
+      $files = Get-ChildItem -Path . -Filter *.*proj -Recurse  | % { $_.FullName }
+      foreach ($file in $files) {
+        ((Get-Content -path $file -Raw) -replace '<TargetFrameworkVersion>v4.5</TargetFrameworkVersion>', '<TargetFrameworkVersion>v4.7.2</TargetFrameworkVersion>') | Set-Content -Path $file
+      }
+
+- task: VSBuild@1
+  displayName: Build SQL
+  inputs:
+    solution: '**/*.sqlproj'
+    msbuildArgs: -verbosity:minimal
+
+- task: CopyFiles@2
+  displayName: Stage DB Files
+  inputs:
+    Contents: '**/*.dacpac'
+    TargetFolder: $(Build.ArtifactStagingDirectory)
+    OverWrite: true
+    flattenFolders: true
+
+- task: PublishBuildArtifacts@1
+  displayName: Publish Artifact

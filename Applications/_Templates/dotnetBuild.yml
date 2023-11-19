@@ -1,0 +1,41 @@
+# https://aka.ms/yaml
+
+parameters:
+- name: restoreBuildProjects
+  type: string
+  default: ''
+- name: buildConfiguration
+  type: string
+  default: ''
+- name: artifactStagingDirectory
+  type: string
+  default: ''
+- name: vstsFeed
+  type: string
+  default: ''
+
+steps:
+- task: DotNetCoreCLI@2
+  displayName: Restore
+  inputs:
+    command: restore
+    projects: ${{parameters.restoreBuildProjects}}
+    vstsFeed: ${{parameters.vstsFeed}}
+
+- task: DotNetCoreCLI@2
+  displayName: Build
+  inputs:
+    projects: |
+      **/*.csproj
+    arguments: '--configuration ${{parameters.buildConfiguration}} '
+
+- task: DotNetCoreCLI@2
+  displayName: Publish
+  inputs:
+    command: publish
+    publishWebProjects: false
+    projects: ${{parameters.restoreBuildProjects}}
+    arguments: '--configuration ${{parameters.buildConfiguration}} --output ${{parameters.artifactStagingDirectory}} --self-contained true --framework net7.0 --runtime win-x64'
+
+- task: PublishBuildArtifacts@1
+  displayName: Publish Artifact

@@ -1,0 +1,271 @@
+resources:
+  repositories:
+  - repository: BB8
+    type: git
+    name: BB8
+    trigger:
+      branches:
+        include:
+        - release/*
+        - deploy/*
+        - hotfix/*
+        - develop
+  - repository: Pipelines
+    type: git
+    name: Pipelines
+    trigger: none
+
+variables:
+- group: Artifacts
+- group: ServiceConnections
+- group: Telerik
+- name: dotNetVersion
+  value: "7.0.x"
+- name: adoOrganization
+  value: PresidioDev
+- name: adoProjectName
+  value: BB8
+- name: adoRepoName
+  value: BB8
+- name: adoOrganizationId
+  value: 0788961e-fcd0-4876-a496-697934588dc1
+- name: adoProjectId
+  value: 39589a64-946a-495b-9c02-0af2292a1b90
+- name: buildNumberPrefix
+  value: bb8
+
+parameters:
+- name: branch
+  displayName: BB8 Branch
+  type: string
+  default: ''
+- name: testSettings
+  type: object
+  default:
+
+  - workingDirectory: BB8.AccountsReceivable/BB8.AccountsReceivable.API
+    displayName: BB8.AccountsReceivable.API
+    testDirectory: BB8.AccountsReceivable/**/*.csproj
+    testDll: BB8.AccountsReceivable/BB8.AccountsReceivable.API.UnitTests/bin/Debug/net7.0/BB8.AccountsReceivable.API.UnitTests.dll
+
+  - workingDirectory: BB8.Catalogs/BB8.Catalogs.API
+    displayName: BB8.Catalogs.API
+    testDirectory: BB8.Catalogs/**/*.csproj
+    testDll: BB8.Catalogs/BB8.Catalogs.API.UnitTests/bin/Debug/net7.0/BB8.Catalogs.API.UnitTests.dll
+
+  - workingDirectory: BB8.Companies/BB8.Companies.API
+    displayName: BB8.Companies.API
+    testDirectory: BB8.Companies/**/*.csproj
+    testDll: BB8.Companies/BB8.Companies.API.UnitTests/bin/Debug/net7.0/BB8.Companies.API.UnitTests.dll
+
+  - workingDirectory: BB8.ErpIntegration/BB8.ErpIntegration.API
+    displayName: BB8.ErpIntegration.API
+    testDirectory: BB8.ErpIntegration/**/*.csproj
+    testDll: BB8.ErpIntegration/BB8.ErpIntegration.API.UnitTests/bin/Debug/net7.0/BB8.ErpIntegration.API.UnitTests.dll
+
+  - workingDirectory: BB8.Foundation/BB8.Foundation.API
+    displayName: BB8.Foundation.API
+    testDirectory: BB8.Foundation/**/*.csproj
+    testDll: BB8.Foundation/BB8.Foundation.API.UnitTests/bin/Debug/net7.0/BB8.Foundation.API.UnitTests.dll
+
+  - workingDirectory: BB8.Identity/BB8.Identity.API
+    displayName: BB8.Identity.API
+    testDirectory: BB8.Identity/**/*.csproj
+    testDll: BB8.Identity/BB8.Identity.API.UnitTests/bin/Debug/net7.0/BB8.Identity.API.UnitTests.dll
+
+  - workingDirectory: BB8.MaintenanceContracts/BB8.MaintenanceContracts.API
+    displayName: BB8.MaintenanceContracts.API
+    testDirectory: BB8.MaintenanceContracts/**/*.csproj
+    testDll: BB8.MaintenanceContracts/BB8.MaintenanceContracts.API.UnitTests/bin/Debug/net7.0/BB8.MaintenanceContracts.API.UnitTests.dll
+
+  - workingDirectory: BB8.Orders/BB8.Orders.API
+    displayName: BB8.Orders.API
+    testDirectory: BB8.Orders/**/*.csproj
+    testDll: BB8.Orders/BB8.Orders.API.UnitTests/bin/Debug/net7.0/BB8.Orders.API.UnitTests.dll
+
+  - workingDirectory: BB8.OrderStatus/BB8.OrderStatus.API
+    displayName: BB8.OrderStatus.API
+    testDirectory: BB8.OrderStatus/**/*.csproj
+    testDll: BB8.OrderStatus/BB8.OrderStatus.API.UnitTests/bin/Debug/net7.0/BB8.OrderStatus.API.UnitTests.dll
+
+  - workingDirectory: BB8.PurchaseOrders/BB8.PurchaseOrders.API
+    displayName: BB8.PurchaseOrders.API
+    testDirectory: BB8.PurchaseOrders/**/*.csproj
+    testDll: BB8.PurchaseOrders/BB8.PurchaseOrders.API.UnitTests/bin/Debug/net7.0/BB8.PurchaseOrders.API.UnitTests.dll
+
+  - workingDirectory: BB8.Reporting/BB8.Reporting.API
+    displayName: BB8.Reporting.API
+    testDirectory: BB8.Reporting/**/*.csproj
+    testDll: BB8.Reporting/BB8.Reporting.API.UnitTests/bin/Debug/net7.0/BB8.Reporting.API.UnitTests.dll
+
+  - workingDirectory: BB8.Shopping/BB8.Shopping.API
+    displayName: BB8.Shopping.API
+    testDirectory: BB8.Shopping/**/*.csproj
+    testDll: BB8.Shopping/BB8.Shopping.API.UnitTests/bin/Debug/net7.0/BB8.Shopping.API.UnitTests.dll
+
+  - workingDirectory: BB8.SubscriptionMgmt/BB8.SubscriptionMgmt.API
+    displayName: BB8.SubscriptionMgmt.API
+    testDirectory: BB8.SubscriptionMgmt/**/*.csproj
+    testDll: BB8.SubscriptionMgmt/BB8.SubscriptionMgmt.API.UnitTests/bin/Debug/net7.0/BB8.SubscriptionMgmt.API.UnitTests.dll
+
+stages:
+
+- stage: InitializeBuild
+  displayName: Initialize Build
+  jobs:
+
+  - ${{ if ne(variables['Build.Reason'], 'PullRequest') }}:
+    - job:
+      displayName: Associate Work Items
+      pool:
+        vmImage: ubuntu-latest
+      steps:
+      - ${{ if eq(parameters.branch, '') }}:
+          - checkout: BB8
+      - ${{ else }}:
+          - checkout: git://BB8/BB8@refs/heads/${{parameters.branch}}
+      - template: Applications\_Templates\associateWorkItems.yml@Pipelines
+        parameters:
+          buildId: $(Build.BuildId)
+          commitId: $(Build.SourceVersion)
+          azureDevOpsOrg: $(adoOrganization)
+          azureDevOpsOrgId: $(adoOrganizationId)
+          projectName: $(adoProjectName)
+          projectId: $(adoProjectId)
+          repoName: $(adoRepoName)
+  - ${{ else }}:
+    - job:
+      displayName: Associate Work Items
+      pool:
+        vmImage: ubuntu-latest
+      steps:
+      - ${{ if eq(parameters.branch, '') }}:
+          - checkout: BB8
+      - ${{ else }}:
+          - checkout: git://BB8/BB8@refs/heads/${{parameters.branch}}
+      - template: Applications\_Templates\associateWorkItems.yml@Pipelines
+        parameters:
+          buildId: $(Build.BuildId)
+          commitId: $(Build.SourceVersion)
+          azureDevOpsOrg: $(adoOrganization)
+          azureDevOpsOrgId: $(adoOrganizationId)
+          projectName: $(adoProjectName)
+          projectId: $(adoProjectId)
+          repoName: $(adoRepoName)
+          buildSourceBranch: $(Build.SourceBranch)
+          pullRequestId: $(System.PullRequest.PullRequestId)
+
+  - ${{ if ne(variables['Build.Reason'], 'PullRequest') }}:
+    - job:
+      displayName: Set Build Number
+      pool:
+        vmImage: ubuntu-latest
+      steps:
+      - ${{ if eq(parameters.branch, '') }}:
+          - checkout: BB8
+      - ${{ else }}:
+          - checkout: git://BB8/BB8@refs/heads/${{parameters.branch}}
+      - template: Applications\_Templates\setBuildId.yml@Pipelines
+        parameters:
+          manualBranch: ${{ parameters.branch }}
+          buildSourceBranch: $(Build.SourceBranch)
+          buildNumberPrefix: $(buildNumberPrefix)
+          buildNumber: $(Build.BuildNumber)
+  - ${{ else }}:
+    - job:
+      displayName: Set Build Number
+      pool:
+        vmImage: ubuntu-latest
+      steps:
+      - ${{ if eq(parameters.branch, '') }}:
+          - checkout: BB8
+      - ${{ else }}:
+          - checkout: git://BB8/BB8@refs/heads/${{parameters.branch}}
+      - template: Applications\_Templates\setBuildId.yml@Pipelines
+        parameters:
+          manualBranch: ${{ parameters.branch }}
+          buildSourceBranch: $(Build.SourceBranch)
+          buildNumberPrefix: $(buildNumberPrefix)
+          buildNumber: $(Build.BuildNumber)
+          pullRequestId: $(System.PullRequest.PullRequestId)
+
+- stage: RunAutomatedTests
+  displayName: Run Automated Tests
+  jobs:
+  - ${{ each setting in parameters.testSettings }}:
+    - job:
+      displayName: Run ${{ setting.displayName }} Automated Tests
+      pool:
+        vmImage: windows-latest
+      steps:
+      - ${{ if eq(parameters.branch, '') }}:
+          - checkout: BB8
+      - ${{ else }}:
+          - checkout: git://BB8/BB8@refs/heads/${{parameters.branch}}
+      - template: Applications\_Templates\applicationTest.yml@Pipelines
+        parameters:
+          solution: ${{ setting.testDirectory }}
+          buildConfiguration: Debug
+          vstsFeed: $(Artifacts.FeedId)
+          testDll: ${{ setting.testDll }}
+          userProfile: $(UserProfile)
+          justMockVersion: $(Telerik.JustMockVersion)
+
+- stage: BuildBB8
+  displayName: Build myPresidio
+  jobs:
+
+  - job:
+    displayName: SQL Project Build
+    pool:
+      vmImage: windows-latest
+    steps:
+    - ${{ if eq(parameters.branch, '') }}:
+      - checkout: BB8
+    - ${{ else }}:
+      - checkout: git://BB8/BB8@refs/heads/${{parameters.branch}}
+    - template: Applications\_Templates\sqlProjectBuild.yml@Pipelines
+      parameters:
+        artifactStagingDirectory: $(Build.ArtifactStagingDirectory)
+
+  - job:
+    displayName: Build Services
+    pool:
+      vmImage: windows-latest
+    steps:
+    - ${{ if eq(parameters.branch, '') }}:
+      - checkout: BB8
+    - ${{ else }}:
+      - checkout: git://BB8/BB8@refs/heads/${{parameters.branch}}
+
+    - task: DotNetCoreCLI@2
+      displayName: Restore myPresidio
+      inputs:
+        command: restore
+        projects: '**/*.csproj'
+        vstsFeed: $(Artifacts.FeedId)
+
+    - task: DotNetCoreCLI@2
+      displayName: Build myPresidio
+      inputs:
+        projects: |
+          **/*.csproj
+          !**/*UnitTests.csproj
+          !**/BB8.Core.BuildUtilities.csproj
+          !**/BB8.Core.BuildValidationTool.csproj
+        arguments: '--configuration Release '
+
+    - task: DotNetCoreCLI@2
+      displayName: Publish myPresidio
+      inputs:
+        command: publish
+        publishWebProjects: false
+        projects: |
+          **/*.csproj
+          !**/*UnitTests.csproj
+          !**/BB8.Core.BuildUtilities.csproj
+          !**/BB8.Core.BuildValidationTool.csproj
+        arguments: '--configuration Release --output $(Build.ArtifactStagingDirectory) --self-contained true --framework net7.0 --runtime win-x64'
+
+    - task: PublishBuildArtifacts@1
+      displayName: Publish Artifact

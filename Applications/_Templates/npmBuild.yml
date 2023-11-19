@@ -1,0 +1,45 @@
+# https://aka.ms/yaml
+
+parameters:
+- name: nodeVersion
+  type: string
+  default: ''
+- name: workingDirectory
+  type: string
+  default: ''
+- name: rootFolderOrFile
+  type: string
+  default: ''
+- name: archiveFile
+  type: string
+  default: ''
+
+steps:
+- task: UseNode@1
+  displayName: Use Node
+  inputs:
+    version: ${{ parameters.nodeVersion }}
+
+- task: Npm@1
+  displayName: 'NPM: Install'
+  inputs:
+    workingDir: ${{ parameters.workingDirectory }}
+    verbose: false
+
+- task: Npm@1
+  displayName: 'NPM: Build'
+  inputs:
+    command: custom
+    workingDir: ${{ parameters.workingDirectory }}
+    verbose: false
+    customCommand: run build
+
+- task: ArchiveFiles@2
+  displayName: Archive
+  inputs:
+    rootFolderOrFile: ${{ parameters.rootFolderOrFile }}
+    includeRootFolder: false
+    archiveFile: ${{ parameters.archiveFile }}
+
+- task: PublishBuildArtifacts@1
+  displayName: Publish Artifact

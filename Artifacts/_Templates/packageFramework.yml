@@ -1,0 +1,57 @@
+# https://aka.ms/yaml
+
+parameters:
+- name: solution
+  type: string
+  default: ''
+- name: project
+  type: string
+  default: ''
+- name: artifactStagingDirectory
+  type: string
+  default: ''
+- name: buildConfiguration
+  type: string
+  default: ''
+- name: defaultWorkingDirectory
+  type: string
+  default: ''
+- name: vstsFeed
+  type: string
+  default: ''
+
+steps:
+- task: NuGetToolInstaller@1
+  displayName: Use NuGet
+
+- task: NuGetCommand@2
+  displayName: NuGet Restore
+  inputs:
+    vstsFeed: ${{parameters.vstsFeed}}
+    restoreSolution: ${{parameters.solution}}
+    command: restore
+
+- task: VSBuild@1
+  displayName: Build .NET Framework Package
+  inputs:
+    configuration: ${{parameters.buildConfiguration}}
+    msbuildArgs: '/p:DeployOnBuild=true /p:WebPublishMethod=Package /p:PackageAsSingleFile=true /p:SkipInvalidConfigurations=true /p:PackageLocation="${{parameters.artifactStagingDirectory}}"'
+    solution: ${{parameters.solution}}
+
+- task: NuGetCommand@2
+  displayName: NuGet Pack
+  inputs:
+    command: pack
+    packagesToPack: ${{parameters.project}}
+    packDestination: ${{parameters.artifactStagingDirectory}}\nugetpkg
+
+- task: NuGetCommand@2
+  displayName: NuGet Push
+  inputs:
+    command: push
+    publishVstsFeed: ${{parameters.vstsFeed}}
+
+- task: PublishSymbols@2
+  displayName: Publish Symbols
+  inputs:
+    SymbolServerType: TeamServices

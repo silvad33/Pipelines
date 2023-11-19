@@ -1,0 +1,31 @@
+# https://aka.ms/yaml
+
+parameters:
+- name: buildSourceBranch
+  type: string
+  default: ''
+- name: restoreBuildProjects
+  type: string
+  default: ''
+
+steps:
+
+- task: PowerShell@2
+  displayName: Update Version Number
+  inputs:
+    targetType: inline
+    pwsh: true
+    script: |
+      $sourceBranch = "${{parameters.buildSourceBranch}}"
+
+      if ($sourceBranch -ne "refs/heads/master" -and $sourceBranch -ne "refs/heads/main") {
+        $suffix = $sourceBranch.replace('refs/heads/','')
+        $suffix = $suffix.replace('/','-')
+
+        $csproj = "$(restoreBuildProjects)"
+        $xml = [Xml] (Get-Content $csproj)
+        $versionNode = $xml.SelectSingleNode("//Version")
+
+        $versionNode.InnerText = $versionNode.InnerText + "-" + $suffix
+        $xml.Save($csproj)
+      }

@@ -1,0 +1,79 @@
+# https://aka.ms/yaml
+
+parameters:
+- name: buildSourceBranch
+  type: string
+  default: ''
+- name: manualBranch
+  type: string
+  default: ''
+- name: buildNumberPrefix
+  type: string
+  default: ''
+- name: buildNumber
+  type: string
+  default: ''
+- name: pullRequestId
+  type: string
+  default: ''
+
+steps:
+
+- task: PowerShell@2
+  displayName: Set Build Number
+  inputs:
+    targetType: inline
+    pwsh: true
+    script: |
+      $sourceBranch = "${{parameters.buildSourceBranch}}"
+      $manualBranch = "${{parameters.manualBranch}}"
+
+      $parentBranch = ""
+      if (($sourceBranch -like "*deploy*") -or ($manualBranch -like "*deploy*")) {
+        $parentBranch = "deploy"
+      }
+      elseif (($sourceBranch -like "*develop*") -or ($manualBranch -like "*develop*")) {
+        $parentBranch = "develop"
+      }
+      elseif (($sourceBranch -like "*hotfix*") -or ($manualBranch -like "*hotfix*")) {
+        $parentBranch = "hotfix"
+      }
+      elseif (($sourceBranch -like "*release*") -or ($manualBranch -like "*release*")) {
+        $parentBranch = "release"
+      }
+      elseif (($sourceBranch -like "*pull*") -or ($manualBranch -like "*pull*")) {
+        $parentBranch = "pull-request"
+      }
+      else {
+        $parentBranch = "uncategorized"
+      }
+
+      $buildPrefix = "${{parameters.buildNumberPrefix}}-$parentBranch"
+
+      $command= "##vso[build.addbuildtag]${{parameters.buildNumberPrefix}}"
+      Write-Host $command
+
+      $command1 = "##vso[build.addbuildtag]$($parentBranch)"
+      Write-Host $command1
+
+      if (($sourceBranch -like "*deploy*") -or ($sourceBranch -like "*release*") -or ($sourceBranch -like "*dknipper*") -or ($manualBranch -like "*hotfix*"))
+      {
+        $subBranch = ""
+        if ($manualBranch) {
+          $subBranch = $manualBranch.substring($manualBranch.LastIndexOf('/') + 1)
+        }
+        else {
+          $subBranch = $sourceBranch.substring($sourceBranch.LastIndexOf('/') + 1)
+        }
+
+        $Command2 = "##vso[build.addbuildtag]$subBranch"
+        $buildPrefix = "$buildPrefix-$subBranch"
+        Write-Host $Command2
+      }
+
+      if ($sourceBranch -like "*pull*") {
+        Write-Host "##vso[build.updatebuildnumber]$buildPrefix-PR${{parameters.pullRequestId}}--${{parameters.buildNumber}}"
+      }
+      else {
+        Write-Host "##vso[build.updatebuildnumber]$buildPrefix--${{parameters.buildNumber}}"
+      }

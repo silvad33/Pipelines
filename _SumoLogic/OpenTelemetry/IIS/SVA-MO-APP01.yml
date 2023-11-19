@@ -1,0 +1,47 @@
+receivers:
+  filelog/iis/accesslogs/1cdea600-4347-4ef0-8914-eef1948fd267:
+    include_file_name: false
+    include_file_path: true
+    operators:
+      - type: move
+        from: attributes["log.file.path"]
+        to: resource["log.file.path"]
+    include:
+      - C:\inetpub\Logs\LogFiles\W3SVC*\*.log
+  filelog/iis/httperrorlogs/1cdea600-4347-4ef0-8914-eef1948fd267:
+    include_file_name: false
+    include_file_path: true
+    operators:
+      - type: move
+        from: attributes["log.file.path"]
+        to: resource["log.file.path"]
+    include:
+      - C:\Windows\System32\LogFiles\HTTPERR\*.*
+processors:
+  resource/iis_resource_attributes/1cdea600-4347-4ef0-8914-eef1948fd267:
+    attributes:
+      - key: webengine.system
+        value: iis
+        action: insert
+      - key: sumo.datasource
+        value: iis
+        action: insert
+      - key: webengine.cluster.name
+        value: SVA-MO-APP01
+        action: insert
+      - key: _sourceCategory
+        value: otel/iis
+        action: insert
+service:
+  pipelines:
+    logs/iis/1cdea600-4347-4ef0-8914-eef1948fd267:
+      receivers:
+        - filelog/iis/accesslogs/1cdea600-4347-4ef0-8914-eef1948fd267
+        - filelog/iis/httperrorlogs/1cdea600-4347-4ef0-8914-eef1948fd267
+      processors:
+        - memory_limiter
+        - resource/iis_resource_attributes/1cdea600-4347-4ef0-8914-eef1948fd267
+        - batch
+        - resourcedetection/system
+      exporters:
+        - sumologic

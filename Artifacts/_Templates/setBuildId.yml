@@ -1,0 +1,66 @@
+# https://aka.ms/yaml
+
+parameters:
+- name: buildSourceBranch
+  type: string
+  default: ''
+- name: buildNumberPrefix
+  type: string
+  default: ''
+- name: buildNumber
+  type: string
+  default: ''
+- name: pullRequestId
+  type: string
+  default: ''
+
+steps:
+
+- task: PowerShell@2
+  displayName: Set Build Number
+  inputs:
+    targetType: inline
+    pwsh: true
+    script: |
+      $sourceBranch = "${{parameters.buildSourceBranch}}"
+
+      $parentBranch = ""
+      if ($sourceBranch -like "*prerelease*") {
+        $parentBranch = "prerelease"
+      }
+      elseif ($sourceBranch -like "*master*") {
+        $parentBranch = "master"
+      }
+      elseif ($sourceBranch -like "*main*") {
+        $parentBranch = "main"
+      }
+      elseif ($sourceBranch -like "*pull*") {
+        $parentBranch = "pull-request"
+      }
+      else {
+        $parentBranch = "uncategorized"
+      }
+
+      $buildPrefix = "${{parameters.buildNumberPrefix}}-$parentBranch"
+
+      $command= "##vso[build.addbuildtag]${{parameters.buildNumberPrefix}}"
+      Write-Host $command
+
+      $command1 = "##vso[build.addbuildtag]$($parentBranch)"
+      Write-Host $command1
+
+      if ($sourceBranch -like "*prerelease*")
+      {
+        $subBranch =  $sourceBranch.substring($sourceBranch.LastIndexOf('/') + 1)
+
+        $command2 = "##vso[build.addbuildtag]$subBranch"
+        $buildPrefix = "$buildPrefix-$subBranch"
+        Write-Host $command2
+      }
+
+      if ($sourceBranch -like "*pull*") {
+        Write-Host "##vso[build.updatebuildnumber]$buildPrefix-PR${{parameters.pullRequestId}}--${{parameters.buildNumber}}"
+      }
+      else {
+        Write-Host "##vso[build.updatebuildnumber]$buildPrefix--${{parameters.buildNumber}}"
+      }

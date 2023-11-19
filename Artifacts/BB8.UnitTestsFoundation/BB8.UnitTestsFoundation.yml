@@ -1,0 +1,138 @@
+resources:
+  repositories:
+  - repository: BB8.UnitTestsFoundation
+    type: git
+    name: BB8.UnitTestsFoundation
+    trigger:
+      branches:
+        include:
+        - master
+        - prerelease/*
+  - repository: Pipelines
+    type: git
+    name: Pipelines
+    trigger: none
+
+variables:
+- group: Artifacts
+- group: ServiceConnections
+- group: Snyk
+- name: solution
+  value: BB8.UnitTestsFoundation.sln
+- name: buildConfiguration
+  value: Debug
+- name: projectKey
+  value: BB8_BB8.UnitTestsFoundation_AYWdG2adOJtL_g7lMS8h
+- name: buildNumberPrefix
+  value: BB8.UnitTestsFoundation
+- name: restoreBuildProjects
+  value: BB8.UnitTestsFoundation/BB8.UnitTestsFoundation.csproj
+- name: dotNetVersion
+  value: 7.0.x
+- name: sonarQubeConnection
+  value: $(ServiceConnections.SonarQubeBB8.UnitTestsFoundation)
+- name: breakSonarQubefailure
+  value: false
+- name: snkyOrganizationId
+  value: $(Snyk.OrgIdMyPresidio)
+
+stages:
+- stage: SetBuildNumber
+  displayName: Set Build Number
+  jobs:
+
+  - ${{ if ne(variables['Build.Reason'], 'PullRequest') }}:
+    - job:
+      displayName: Set Build Number
+      pool:
+        vmImage: ubuntu-latest
+      steps:
+      - checkout: BB8.UnitTestsFoundation
+      - template: Artifacts\_Templates\setBuildId.yml@Pipelines
+        parameters:
+          buildSourceBranch: $(Build.SourceBranch)
+          buildNumberPrefix: $(buildNumberPrefix)
+          buildNumber: $(Build.BuildNumber)
+  - ${{ else }}:
+    - job:
+      displayName: Set Build Number
+      pool:
+        vmImage: ubuntu-latest
+      steps:
+      - checkout: BB8.UnitTestsFoundation
+      - template: Artifacts\_Templates\setBuildId.yml@Pipelines
+        parameters:
+          buildSourceBranch: $(Build.SourceBranch)
+          buildNumberPrefix: $(buildNumberPrefix)
+          buildNumber: $(Build.BuildNumber)
+          pullRequestId: $(System.PullRequest.PullRequestId)
+
+- stage: CodeAnalysis
+  displayName: Code Analysis
+  jobs:
+  - job:
+    displayName: Run Snyk Scan
+    pool:
+      vmImage: windows-latest
+    steps:
+    - checkout: BB8.UnitTestsFoundation
+    - template: SnykScanners/_Templates/snyk.yml@Pipelines
+      parameters:
+        snykConnection: $(ServiceConnections.SnykAuthentication)
+        solution: $(solution)
+        buildConfiguration: $(buildConfiguration)
+        vstsFeed: $(Artifacts.FeedId)
+        snkyOrganizationId: $(snkyOrganizationId)
+        dotNetVersion: $(dotNetVersion)
+
+  - ${{ if ne(variables['Build.Reason'], 'PullRequest') }}:
+    - job:
+      displayName: Run SonarQube Analysis
+      pool:
+        vmImage: windows-latest
+      steps:
+      - checkout: BB8.UnitTestsFoundation
+      - template: SonarQubeScanners/_Templates/sonarQube.yml@Pipelines
+        parameters:
+          sonarQubeConnection: $(sonarQubeConnection)
+          solution: $(solution)
+          buildConfiguration: $(buildConfiguration)
+          projectKey: $(projectKey)
+          vstsFeed: $(Artifacts.FeedId)
+          breakSonarQubefailure: '${{ variables.breakSonarQubefailure }}'
+          dotNetVersion: $(dotNetVersion)
+  - ${{ else }}:
+    - job:
+      displayName: Run SonarQube Analysis
+      pool:
+        vmImage: windows-latest
+      steps:
+      - checkout: BB8.UnitTestsFoundation
+      - template: SonarQubeScanners/_Templates/sonarQube.yml@Pipelines
+        parameters:
+          sonarQubeConnection: $(sonarQubeConnection)
+          solution: $(solution)
+          buildConfiguration: $(buildConfiguration)
+          projectKey: $(projectKey)
+          vstsFeed: $(Artifacts.FeedId)
+          breakSonarQubefailure: '${{ variables.breakSonarQubefailure }}'
+          dotNetVersion: $(dotNetVersion)
+          prId: $(System.PullRequest.PullRequestId)
+          prSourceBranch: $(System.PullRequest.SourceBranch)
+          prTargetBranch: $(System.PullRequest.TargetBranch)
+
+- ${{ if ne(variables['Build.Reason'], 'PullRequest') }}:
+  - stage: CreatePackage
+    displayName: Create Package
+    jobs:
+    - job:
+      displayName: Create Package
+      pool:
+        vmImage: ubuntu-latest
+      steps:
+      - checkout: BB8.UnitTestsFoundation
+      - template: Artifacts\_Templates\package.yml@Pipelines
+        parameters:
+          restoreBuildProjects: $(restoreBuildProjects)
+          buildConfiguration: $(buildConfiguration)
+          vstsFeed: $(Artifacts.FeedId)

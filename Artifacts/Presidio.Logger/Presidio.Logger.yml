@@ -1,0 +1,156 @@
+resources:
+  repositories:
+  - repository: Presidio.Logger
+    type: git
+    name: Presidio.Logger
+    trigger:
+      branches:
+        include:
+        - main
+        - prerelease/*
+  - repository: Pipelines
+    type: git
+    name: Pipelines
+    trigger: none
+
+variables:
+- group: Artifacts
+- group: ServiceConnections
+- group: Snyk
+- name: solution
+  value: Presidio.Logger.sln
+- name: buildConfiguration
+  value: Debug
+- name: projectKey
+  value: BB8_Presidio.Logger_AYYT0E6KOJtL_g7lMTTR
+- name: buildNumberPrefix
+  value: Presidio.Logger
+- name: restoreBuildProjects
+  value: Presidio.Logger/Presidio.Logger.csproj
+- name: workingDirectory
+  value: Presidio.Logger
+- name: testDirectory
+  value: Presidio.Logger.Tests
+- name: testDll
+  value: Presidio.Logger.Tests/bin/Debug/net6.0/Presidio.Logger.Tests.dll
+- name: sonarQubeConnection
+  value: $(ServiceConnections.SonarQubePresidio.Logger)
+- name: breakSonarQubefailure
+  value: false
+- name: snkyOrganizationId
+  value: $(Snyk.OrgIdDevOps)
+
+stages:
+- stage: SetBuildNumber
+  displayName: Set Build Number
+  jobs:
+
+  - ${{ if ne(variables['Build.Reason'], 'PullRequest') }}:
+    - job:
+      displayName: Set Build Number
+      pool:
+        vmImage: ubuntu-latest
+      steps:
+      - checkout: Presidio.Logger
+      - template: Artifacts\_Templates\setBuildId.yml@Pipelines
+        parameters:
+          buildSourceBranch: $(Build.SourceBranch)
+          buildNumberPrefix: $(buildNumberPrefix)
+          buildNumber: $(Build.BuildNumber)
+  - ${{ else }}:
+    - job:
+      displayName: Set Build Number
+      pool:
+        vmImage: ubuntu-latest
+      steps:
+      - checkout: Presidio.Logger
+      - template: Artifacts\_Templates\setBuildId.yml@Pipelines
+        parameters:
+          buildSourceBranch: $(Build.SourceBranch)
+          buildNumberPrefix: $(buildNumberPrefix)
+          buildNumber: $(Build.BuildNumber)
+          pullRequestId: $(System.PullRequest.PullRequestId)
+
+- stage: RunAutomatedTests
+  displayName: Run Automated Tests
+  jobs:
+  - job:
+    displayName: Run Automated Tests
+    pool:
+      vmImage: windows-latest
+    steps:
+    - checkout: Presidio.Logger
+    - template: Artifacts\_Templates\packageTest.yml@Pipelines
+      parameters:
+        solution: $(solution)
+        buildConfiguration: $(buildConfiguration)
+        vstsFeed: $(Artifacts.FeedId)
+        testDll: $(testDll)
+- stage: CodeAnalysis
+  displayName: Code Analysis
+  jobs:
+  - job:
+    displayName: Run Snyk Scan
+    pool:
+      vmImage: windows-latest
+    steps:
+    - checkout: Presidio.Logger
+    - template: SnykScanners/_Templates/snyk.yml@Pipelines
+      parameters:
+        snykConnection: $(ServiceConnections.SnykAuthentication)
+        solution: $(solution)
+        buildConfiguration: $(buildConfiguration)
+        vstsFeed: $(Artifacts.FeedId)
+        snkyOrganizationId: $(snkyOrganizationId)
+
+  - ${{ if ne(variables['Build.Reason'], 'PullRequest') }}:
+    - job:
+      displayName: Run SonarQube Analysis
+      pool:
+        vmImage: windows-latest
+      steps:
+      - checkout: Presidio.Logger
+      - template: SonarQubeScanners/_Templates/sonarQube.yml@Pipelines
+        parameters:
+          sonarQubeConnection: $(sonarQubeConnection)
+          solution: $(solution)
+          buildConfiguration: $(buildConfiguration)
+          projectKey: $(projectKey)
+          vstsFeed: $(Artifacts.FeedId)
+          breakSonarQubefailure: '${{ variables.breakSonarQubefailure }}'
+          testDll: $(testDll)
+  - ${{ else }}:
+    - job:
+      displayName: Run SonarQube Analysis
+      pool:
+        vmImage: windows-latest
+      steps:
+      - checkout: Presidio.Logger
+      - template: SonarQubeScanners/_Templates/sonarQube.yml@Pipelines
+        parameters:
+          sonarQubeConnection: $(sonarQubeConnection)
+          solution: $(solution)
+          buildConfiguration: $(buildConfiguration)
+          projectKey: $(projectKey)
+          vstsFeed: $(Artifacts.FeedId)
+          breakSonarQubefailure: '${{ variables.breakSonarQubefailure }}'
+          testDll: $(testDll)
+          prId: $(System.PullRequest.PullRequestId)
+          prSourceBranch: $(System.PullRequest.SourceBranch)
+          prTargetBranch: $(System.PullRequest.TargetBranch)
+
+- ${{ if ne(variables['Build.Reason'], 'PullRequest') }}:
+  - stage: CreatePackage
+    displayName: Create Package
+    jobs:
+    - job:
+      displayName: Create Package
+      pool:
+        vmImage: ubuntu-latest
+      steps:
+      - checkout: Presidio.Logger
+      - template: Artifacts\_Templates\package.yml@Pipelines
+        parameters:
+          restoreBuildProjects: $(restoreBuildProjects)
+          buildConfiguration: $(buildConfiguration)
+          vstsFeed: $(Artifacts.FeedId)

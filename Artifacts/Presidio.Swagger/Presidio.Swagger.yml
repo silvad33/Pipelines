@@ -1,0 +1,156 @@
+resources:
+  repositories:
+  - repository: Presidio.Swagger
+    type: git
+    name: Presidio.Swagger
+    trigger:
+      branches:
+        include:
+        - main
+        - prerelease/*
+  - repository: Pipelines
+    type: git
+    name: Pipelines
+    trigger: none
+
+variables:
+- group: Artifacts
+- group: ServiceConnections
+- group: Snyk
+- name: solution
+  value: Presidio.Swagger.sln
+- name: buildConfiguration
+  value: Debug
+- name: projectKey
+  value: BB8_Presidio.Swagger_AYo9mdPaYbJYQ4Wy-IWi
+- name: buildNumberPrefix
+  value: Presidio.Swagger
+- name: restoreBuildProjects
+  value: Presidio.Swagger/Presidio.Swagger.csproj
+- name: workingDirectory
+  value: Presidio.Swagger
+- name: testDirectory
+  value: Presidio.Swagger.Tests
+- name: testDll
+  value: Presidio.Swagger.Tests/bin/Debug/net7.0/Presidio.Swagger.Tests.dll
+- name: sonarQubeConnection
+  value: $(ServiceConnections.SonarQubePresidio.Swagger)
+- name: breakSonarQubefailure
+  value: false
+- name: snkyOrganizationId
+  value: $(Snyk.OrgIdDevOps)
+
+stages:
+- stage: SetBuildNumber
+  displayName: Set Build Number
+  jobs:
+
+  - ${{ if ne(variables['Build.Reason'], 'PullRequest') }}:
+    - job:
+      displayName: Set Build Number
+      pool:
+        vmImage: ubuntu-latest
+      steps:
+      - checkout: Presidio.Swagger
+      - template: Artifacts\_Templates\setBuildId.yml@Pipelines
+        parameters:
+          buildSourceBranch: $(Build.SourceBranch)
+          buildNumberPrefix: $(buildNumberPrefix)
+          buildNumber: $(Build.BuildNumber)
+  - ${{ else }}:
+    - job:
+      displayName: Set Build Number
+      pool:
+        vmImage: ubuntu-latest
+      steps:
+      - checkout: Presidio.Swagger
+      - template: Artifacts\_Templates\setBuildId.yml@Pipelines
+        parameters:
+          buildSourceBranch: $(Build.SourceBranch)
+          buildNumberPrefix: $(buildNumberPrefix)
+          buildNumber: $(Build.BuildNumber)
+          pullRequestId: $(System.PullRequest.PullRequestId)
+
+- stage: RunAutomatedTests
+  displayName: Run Automated Tests
+  jobs:
+  - job:
+    displayName: Run Automated Tests
+    pool:
+      vmImage: windows-latest
+    steps:
+    - checkout: Presidio.Swagger
+    - template: Artifacts\_Templates\packageTest.yml@Pipelines
+      parameters:
+        solution: $(solution)
+        buildConfiguration: $(buildConfiguration)
+        vstsFeed: $(Artifacts.FeedId)
+        testDll: $(testDll)
+- stage: CodeAnalysis
+  displayName: Code Analysis
+  jobs:
+  - job:
+    displayName: Run Snyk Scan
+    pool:
+      vmImage: windows-latest
+    steps:
+    - checkout: Presidio.Swagger
+    - template: SnykScanners/_Templates/snyk.yml@Pipelines
+      parameters:
+        snykConnection: $(ServiceConnections.SnykAuthentication)
+        solution: $(solution)
+        buildConfiguration: $(buildConfiguration)
+        vstsFeed: $(Artifacts.FeedId)
+        snkyOrganizationId: $(snkyOrganizationId)
+
+  - ${{ if ne(variables['Build.Reason'], 'PullRequest') }}:
+    - job:
+      displayName: Run SonarQube Analysis
+      pool:
+        vmImage: windows-latest
+      steps:
+      - checkout: Presidio.Swagger
+      - template: SonarQubeScanners/_Templates/sonarQube.yml@Pipelines
+        parameters:
+          sonarQubeConnection: $(sonarQubeConnection)
+          solution: $(solution)
+          buildConfiguration: $(buildConfiguration)
+          projectKey: $(projectKey)
+          vstsFeed: $(Artifacts.FeedId)
+          breakSonarQubefailure: '${{ variables.breakSonarQubefailure }}'
+          testDll: $(testDll)
+  - ${{ else }}:
+    - job:
+      displayName: Run SonarQube Analysis
+      pool:
+        vmImage: windows-latest
+      steps:
+      - checkout: Presidio.Swagger
+      - template: SonarQubeScanners/_Templates/sonarQube.yml@Pipelines
+        parameters:
+          sonarQubeConnection: $(sonarQubeConnection)
+          solution: $(solution)
+          buildConfiguration: $(buildConfiguration)
+          projectKey: $(projectKey)
+          vstsFeed: $(Artifacts.FeedId)
+          breakSonarQubefailure: '${{ variables.breakSonarQubefailure }}'
+          testDll: $(testDll)
+          prId: $(System.PullRequest.PullRequestId)
+          prSourceBranch: $(System.PullRequest.SourceBranch)
+          prTargetBranch: $(System.PullRequest.TargetBranch)
+
+- ${{ if ne(variables['Build.Reason'], 'PullRequest') }}:
+  - stage: CreatePackage
+    displayName: Create Package
+    jobs:
+    - job:
+      displayName: Create Package
+      pool:
+        vmImage: ubuntu-latest
+      steps:
+      - checkout: Presidio.Swagger
+      - template: Artifacts\_Templates\package.yml@Pipelines
+        parameters:
+          restoreBuildProjects: $(restoreBuildProjects)
+          buildConfiguration: $(buildConfiguration)
+          vstsFeed: $(Artifacts.FeedId)

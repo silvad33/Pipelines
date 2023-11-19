@@ -1,0 +1,170 @@
+# https://aka.ms/yaml
+
+variables:
+- group: Artifacts
+- name: buildConfiguration
+  value: FullSolutionRebuild
+- name: buildPlatform
+  value: any cpu
+- name: solution
+  value: MyOrdersUniverse.sln
+- name: nugetVersion
+  value: "5.8.1"
+
+parameters:
+- name: branch
+  displayName: R2D2 Branch
+  type: string
+  default: ''
+
+resources:
+  repositories:
+  - repository: R2D2
+    type: git
+    name: R2D2
+    trigger:
+      branches:
+        include:
+        - release/*
+        - deploy/*
+        - work/dknipper/*
+        - develop
+  - repository: Pipelines
+    type: git
+    name: Pipelines
+    trigger: none
+
+stages:
+- stage: BuildR2D2
+  displayName: Build MyOrders
+  jobs:
+  - job:
+    displayName: Build MyOrders
+    pool:
+      vmImage: windows-latest
+    steps:
+    - ${{ if eq(parameters.branch, '') }}:
+      - checkout: R2D2
+    - ${{ else }}:
+      - checkout: git://BB8/R2D2@refs/heads/${{parameters.branch}}
+    - task: PowerShell@2
+      displayName: Set Tags
+      inputs:
+        targetType: inline
+        pwsh: true
+        script: |
+          $sourceBranch = "$(Build.SourceBranch)"
+          $manualBranch = "${{ parameters.branch }}"
+
+          $parentBranch = ""
+          if (($sourceBranch -like "*deploy*") -or ($manualBranch -like "*deploy*")) {
+            $parentBranch = "deploy"
+          }
+          elseif (($sourceBranch -like "*develop*") -or ($manualBranch -like "*develop*")) {
+            $parentBranch = "develop"
+          }
+          elseif (($sourceBranch -like "*hotfix*") -or ($manualBranch -like "*hotfix*")) {
+            $parentBranch = "hotfix"
+          }
+          elseif (($sourceBranch -like "*release*") -or ($manualBranch -like "*release*")) {
+            $parentBranch = "release"
+          }
+          elseif (($sourceBranch -like "*pull*") -or ($manualBranch -like "*pull*")) {
+            $parentBranch = "pull-request"
+          }
+          else {
+            $parentBranch = "uncategorized"
+          }
+
+          $buildPrefix = "r2d2-$parentBranch"
+
+          $Command= "##vso[build.addbuildtag]r2d2"
+          Write-Host $Command
+
+          $Command1 = "##vso[build.addbuildtag]$($parentBranch)"
+          Write-Host $Command1
+
+          if (($sourceBranch -like "*deploy*") -or ($sourceBranch -like "*release*") -or ($sourceBranch -like "*dknipper*") -or ($manualBranch -like "*hotfix*"))
+          {
+            $subBranch = ""
+            if ($manualBranch) {
+              $subBranch = $manualBranch.substring($manualBranch.LastIndexOf('/') + 1)
+            }
+            else {
+              $subBranch = $sourceBranch.substring($sourceBranch.LastIndexOf('/') + 1)
+            }
+
+            $Command2 = "##vso[build.addbuildtag]$subBranch"
+            $buildPrefix = "$buildPrefix-$subBranch"
+            Write-Host $Command2
+          }
+
+          if ($sourceBranch -like "*pull*" -or ($manualBranch -like "*pull*")) {
+            Write-Host "##vso[build.updatebuildnumber]$buildPrefix-PR$(System.PullRequest.PullRequestId)--$(Build.BuildNumber)"
+          }
+          else {
+            Write-Host "##vso[build.updatebuildnumber]$buildPrefix--$(Build.BuildNumber)"
+          }
+
+    - task: NuGetToolInstaller@0
+      displayName: Use NuGet $(nugetVersion)
+      inputs:
+        versionSpec: $(nugetVersion)
+
+    - task: NuGetCommand@2
+      displayName: NuGet Restore
+      inputs:
+        restoreSolution: $(solution)
+        vstsFeed: $(Artifacts.FeedId)
+        includeNuGetOrg: false
+
+    - task: VSBuild@1
+      displayName: Build Solution
+      inputs:
+        solution: $(solution)
+        msbuildArgs: '/p:DeployOnBuild=true /p:WebPublishMethod=Package /p:PackageAsSingleFile=true /p:SkipInvalidConfigurations=true /p:PackageLocation="$(Build.ArtifactStagingDirectory)\\"'
+        platform: $(buildPlatform)
+        configuration: $(buildConfiguration)
+
+    - task: CopyFiles@2
+      displayName: Stage DB Files
+      inputs:
+        Contents: '**/*.dacpac'
+        TargetFolder: $(Build.ArtifactStagingDirectory)
+        OverWrite: true
+        flattenFolders: true
+
+    - task: CopyFiles@2
+      displayName: Copy PresidioAdminService
+      inputs:
+        SourceFolder: PresidioAdminService/bin/Debug/
+        TargetFolder: '$(Build.ArtifactStagingDirectory)\PresidioAdminService'
+        CleanTargetFolder: true
+        OverWrite: true
+
+    - task: CopyFiles@2
+      displayName: Copy PresidioSchedulerService
+      inputs:
+        SourceFolder: PresidioSchedulerService/PresidioSchedulerService/bin/Debug/
+        TargetFolder: '$(Build.ArtifactStagingDirectory)\PresidioSchedulerService'
+        CleanTargetFolder: true
+        OverWrite: true
+
+    - task: CopyFiles@2
+      displayName: Copy Common Files
+      inputs:
+        SourceFolder: R2D2-2.0/R2D2.CommonFiles
+        TargetFolder: '$(Build.ArtifactStagingDirectory)\Common'
+        CleanTargetFolder: true
+        OverWrite: true
+        Contents: |
+          Config/**
+          Shared/**
+          Workflow/**
+          Maps/**
+
+    - task: PublishBuildArtifacts@1
+      displayName: Publish Artifact
+      inputs:
+        PathtoPublish: $(Build.ArtifactStagingDirectory)
+        ArtifactName: drop

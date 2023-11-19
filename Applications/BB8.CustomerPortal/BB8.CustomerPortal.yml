@@ -1,0 +1,263 @@
+resources:
+  repositories:
+  - repository: presidio-customer-portal
+    type: git
+    name: presidio-customer-portal
+    trigger:
+      branches:
+        include:
+        - release/*
+        - deploy/*
+        - hotfix/*
+        - develop
+  - repository: Pipelines
+    type: git
+    name: Pipelines
+    trigger: none
+
+variables:
+- group: Artifacts
+- group: ServiceConnections
+- group: Snyk
+- name: buildConfiguration
+  value: Debug
+- name: dotNetVersion
+  value: "7.0.x"
+- name: nodeVersion
+  value: 14.18.1
+- name: adoOrganization
+  value: PresidioDev
+- name: adoProjectName
+  value: BB8
+- name: adoRepoName
+  value: presidio-customer-portal
+- name: adoOrganizationId
+  value: 0788961e-fcd0-4876-a496-697934588dc1
+- name: adoProjectId
+  value: 39589a64-946a-495b-9c02-0af2292a1b90
+- name: workingDirectory
+  value: BB8.CustomerPortal.UI
+- name: rootFolderOrFile
+  value: BB8.CustomerPortal.UI/wwwroot
+- name: archiveFile
+  value: $(Build.ArtifactStagingDirectory)/CustomerPortal.UI.zip
+- name: buildNumberPrefix
+  value: BB8.CustomerPortal.UI
+- name: restoreBuildProjects
+  value: BB8.CustomerPortal.UI/BB8.CustomerPortal.UI.csproj
+- name: solution
+  value: BB8.CustomerPortal.sln
+- name: testDll
+  value: BB8.CustomerPortal.UI.Tests/bin/Debug/net7.0/BB8.CustomerPortal.UI.Tests.dll
+- name: projectKey
+  value: BB8_presidio-customer-portal_AYprT7nQYbJYQ4Wy-KJi
+- name: sonarQubeConnection
+  value: $(ServiceConnections.SonarQubepresidio-customer-portal)
+- name: breakSonarQubefailure
+  value: false
+- name: snkyOrganizationId
+  value: $(Snyk.OrgIdMyPresidio)
+
+parameters:
+- name: branch
+  displayName: Customer Portal Branch
+  type: string
+  default: ''
+
+stages:
+
+- stage: InitializeBuild
+  displayName: Initialize Build
+  jobs:
+
+  - ${{ if ne(variables['Build.Reason'], 'PullRequest') }}:
+    - job:
+      displayName: Associate Work Items
+      pool:
+        vmImage: ubuntu-latest
+      steps:
+      - ${{ if eq(parameters.branch, '') }}:
+        - checkout: presidio-customer-portal
+      - ${{ else }}:
+        - checkout: git://BB8/presidio-customer-portal@refs/heads/${{parameters.branch}}
+      - template: Applications\_Templates\associateWorkItems.yml@Pipelines
+        parameters:
+          buildId: $(Build.BuildId)
+          commitId: $(Build.SourceVersion)
+          azureDevOpsOrg: $(adoOrganization)
+          azureDevOpsOrgId: $(adoOrganizationId)
+          projectName: $(adoProjectName)
+          projectId: $(adoProjectId)
+          repoName: $(adoRepoName)
+  - ${{ else }}:
+    - job:
+      displayName: Associate Work Items
+      pool:
+        vmImage: ubuntu-latest
+      steps:
+      - ${{ if eq(parameters.branch, '') }}:
+        - checkout: presidio-customer-portal
+      - ${{ else }}:
+        - checkout: git://BB8/presidio-customer-portal@refs/heads/${{parameters.branch}}
+      - template: Applications\_Templates\associateWorkItems.yml@Pipelines
+        parameters:
+          buildId: $(Build.BuildId)
+          commitId: $(Build.SourceVersion)
+          azureDevOpsOrg: $(adoOrganization)
+          azureDevOpsOrgId: $(adoOrganizationId)
+          projectName: $(adoProjectName)
+          projectId: $(adoProjectId)
+          repoName: $(adoRepoName)
+          buildSourceBranch: $(Build.SourceBranch)
+          pullRequestId: $(System.PullRequest.PullRequestId)
+
+  - ${{ if ne(variables['Build.Reason'], 'PullRequest') }}:
+    - job:
+      displayName: Set Build Number
+      pool:
+        vmImage: ubuntu-latest
+      steps:
+      - ${{ if eq(parameters.branch, '') }}:
+        - checkout: presidio-customer-portal
+      - ${{ else }}:
+        - checkout: git://BB8/presidio-customer-portal@refs/heads/${{parameters.branch}}
+      - template: Applications\_Templates\setBuildId.yml@Pipelines
+        parameters:
+          manualBranch: ${{ parameters.branch }}
+          buildSourceBranch: $(Build.SourceBranch)
+          buildNumberPrefix: $(buildNumberPrefix)
+          buildNumber: $(Build.BuildNumber)
+  - ${{ else }}:
+    - job:
+      displayName: Set Build Number
+      pool:
+        vmImage: ubuntu-latest
+      steps:
+      - ${{ if eq(parameters.branch, '') }}:
+        - checkout: presidio-customer-portal
+      - ${{ else }}:
+        - checkout: git://BB8/presidio-customer-portal@refs/heads/${{parameters.branch}}
+      - template: Applications\_Templates\setBuildId.yml@Pipelines
+        parameters:
+          manualBranch: ${{ parameters.branch }}
+          buildSourceBranch: $(Build.SourceBranch)
+          buildNumberPrefix: $(buildNumberPrefix)
+          buildNumber: $(Build.BuildNumber)
+          pullRequestId: $(System.PullRequest.PullRequestId)
+
+- stage: RunAutomatedTests
+  displayName: Run Automated Tests
+  jobs:
+  - job:
+    displayName: Run Automated Tests
+    pool:
+      vmImage: windows-latest
+    steps:
+    - ${{ if eq(parameters.branch, '') }}:
+      - checkout: presidio-customer-portal
+    - ${{ else }}:
+      - checkout: git://BB8/presidio-customer-portal@refs/heads/${{parameters.branch}}
+    - template: Applications\_Templates\applicationTest.yml@Pipelines
+      parameters:
+        solution: $(solution)
+        buildConfiguration: $(buildConfiguration)
+        vstsFeed: $(Artifacts.FeedId)
+        testDll: $(testDll)
+
+- stage: CodeAnalysis
+  displayName: Code Analysis
+  jobs:
+  # todo: fix snyk?
+  #- job:
+  #  displayName: Run Snyk Scan
+  #  pool:
+  #    vmImage: windows-latest
+  #  steps:
+  #  - ${{ if eq(parameters.branch, '') }}:
+  #    - checkout: presidio-customer-portal
+  #  - ${{ else }}:
+  #    - checkout: git://BB8/presidio-customer-portal@refs/heads/${{parameters.branch}}
+  #  - template: SnykScanners/_Templates/snyk.yml@Pipelines
+  #    parameters:
+  #      snykConnection: $(ServiceConnections.SnykAuthentication)
+  #      solution:  ${{ variables.solution }}
+  #      buildConfiguration: ${{ variables.buildConfiguration }}
+  #      vstsFeed: $(Artifacts.FeedId)
+  #      snkyOrganizationId: $(snkyOrganizationId)
+
+  - ${{ if ne(variables['Build.Reason'], 'PullRequest') }}:
+    - job:
+      displayName: Run SonarQube Analysis
+      pool:
+        vmImage: windows-latest
+      steps:
+      - ${{ if eq(parameters.branch, '') }}:
+        - checkout: presidio-customer-portal
+      - ${{ else }}:
+        - checkout: git://BB8/presidio-customer-portal@refs/heads/${{parameters.branch}}
+      - template: SonarQubeScanners/_Templates/sonarQube.yml@Pipelines
+        parameters:
+          sonarQubeConnection: $(sonarQubeConnection)
+          solution: ${{ variables.solution }}
+          buildConfiguration: ${{ variables.buildConfiguration }}
+          projectKey: ${{ variables.projectKey }}
+          vstsFeed: $(Artifacts.FeedId)
+          breakSonarQubefailure: '${{ variables.breakSonarQubefailure }}'
+          testDll: ${{ variables.testDll }}
+  - ${{ else }}:
+    - job:
+      displayName: Run SonarQube Analysis
+      pool:
+        vmImage: windows-latest
+      steps:
+      - ${{ if eq(parameters.branch, '') }}:
+        - checkout: presidio-customer-portal
+      - ${{ else }}:
+        - checkout: git://BB8/presidio-customer-portal@refs/heads/${{parameters.branch}}
+      - template: SonarQubeScanners/_Templates/sonarQube.yml@Pipelines
+        parameters:
+          sonarQubeConnection: $(sonarQubeConnection)
+          solution: ${{ variables.solution }}
+          buildConfiguration: ${{ variables.buildConfiguration }}
+          projectKey: ${{ variables.projectKey }}
+          vstsFeed: $(Artifacts.FeedId)
+          breakSonarQubefailure: '${{ variables.breakSonarQubefailure }}'
+          testDll: ${{ variables.testDll }}
+          prId: $(System.PullRequest.PullRequestId)
+          prSourceBranch: $(System.PullRequest.SourceBranch)
+          prTargetBranch: $(System.PullRequest.TargetBranch)
+
+- stage: Build
+  displayName: Build
+  jobs:
+  - job:
+    displayName: NPM Build
+    pool:
+      vmImage: windows-latest
+    steps:
+    - ${{ if eq(parameters.branch, '') }}:
+      - checkout: presidio-customer-portal
+    - ${{ else }}:
+      - checkout: git://BB8/presidio-customer-portal@refs/heads/${{parameters.branch}}
+    - template: Applications\_Templates\npmBuild.yml@Pipelines
+      parameters:
+        nodeVersion: $(nodeVersion)
+        workingDirectory: $(workingDirectory)
+        rootFolderOrFile: $(rootFolderOrFile)
+        archiveFile: $(archiveFile)
+
+  - job:
+    displayName: .NET Build
+    pool:
+      vmImage: windows-latest
+    steps:
+    - ${{ if eq(parameters.branch, '') }}:
+      - checkout: presidio-customer-portal
+    - ${{ else }}:
+      - checkout: git://BB8/presidio-customer-portal@refs/heads/${{parameters.branch}}
+    - template: Applications\_Templates\dotnetBuild.yml@Pipelines
+      parameters:
+        buildConfiguration: $(buildConfiguration)
+        vstsFeed: $(Artifacts.FeedId)
+        artifactStagingDirectory: $(Build.ArtifactStagingDirectory)
+        restoreBuildProjects: $(restoreBuildProjects)

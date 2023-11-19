@@ -1,0 +1,123 @@
+resources:
+  repositories:
+  - repository: Presidio.ExcelLibrary
+    type: git
+    name: Presidio.ExcelLibrary
+    trigger:
+      branches:
+        include:
+        - main
+        - prerelease/*
+  - repository: Pipelines
+    type: git
+    name: Pipelines
+    trigger: none
+
+variables:
+- group: Artifacts
+- group: ServiceConnections
+- name: solution
+  value: Presidio.ExcelLibrary.sln
+- name: project
+  value: Presidio.ExcelLibrary\Presidio.ExcelLibrary.csproj
+- name: buildConfiguration
+  value: Debug
+- name: projectKey
+  value: BB8_Presidio.ExcelLibrary_AYP29pCpIihemu6-HAJW
+- name: buildPlatform
+  value: any cpu
+- name: buildNumberPrefix
+  value: Presidio.ExcelLibrary
+- name: sonarQubeConnection
+  value: $(ServiceConnections.SonarQubePresidio.ExcelLibrary)
+- name: breakSonarQubefailure
+  value: false
+
+stages:
+- stage: SetBuildNumber
+  displayName: Set Build Number
+  jobs:
+
+  - ${{ if ne(variables['Build.Reason'], 'PullRequest') }}:
+    - job:
+      displayName: Set Build Number
+      pool:
+        vmImage: ubuntu-latest
+      steps:
+      - checkout: Presidio.ExcelLibrary
+      - template: Artifacts\_Templates\setBuildId.yml@Pipelines
+        parameters:
+          buildSourceBranch: $(Build.SourceBranch)
+          buildNumberPrefix: $(buildNumberPrefix)
+          buildNumber: $(Build.BuildNumber)
+  - ${{ else }}:
+    - job:
+      displayName: Set Build Number
+      pool:
+        vmImage: ubuntu-latest
+      steps:
+      - checkout: Presidio.ExcelLibrary
+      - template: Artifacts\_Templates\setBuildId.yml@Pipelines
+        parameters:
+          buildSourceBranch: $(Build.SourceBranch)
+          buildNumberPrefix: $(buildNumberPrefix)
+          buildNumber: $(Build.BuildNumber)
+          pullRequestId: $(System.PullRequest.PullRequestId)
+
+- stage: CodeAnalysis
+  displayName: Code Analysis
+  jobs:
+  - ${{ if ne(variables['Build.Reason'], 'PullRequest') }}:
+    - job:
+      displayName: Run SonarQube Analysis
+      pool:
+        vmImage: windows-latest
+      steps:
+      - checkout: Presidio.ExcelLibrary
+      - template: SonarQubeScanners/_Templates/sonarQubeFramework.yml@Pipelines
+        parameters:
+        sonarQubeConnection: $(sonarQubeConnection)
+        solution: $(solution)
+        buildConfiguration: $(buildConfiguration)
+        projectKey: $(projectKey)
+        vstsFeed: $(Artifacts.FeedId)
+        breakSonarQubefailure: '${{ variables.breakSonarQubefailure }}'
+        buildPlatform: $(buildPlatform)
+  - ${{ else }}:
+    - job:
+      displayName: Run SonarQube Analysis
+      pool:
+        vmImage: windows-latest
+      steps:
+      - checkout: Presidio.ExcelLibrary
+      - template: SonarQubeScanners/_Templates/sonarQubeFramework.yml@Pipelines
+        parameters:
+          sonarQubeConnection: $(sonarQubeConnection)
+          solution: $(solution)
+          buildConfiguration: $(buildConfiguration)
+          projectKey: $(projectKey)
+          vstsFeed: $(Artifacts.FeedId)
+          breakSonarQubefailure: '${{ variables.breakSonarQubefailure }}'
+          buildPlatform: $(buildPlatform)
+          prId: $(System.PullRequest.PullRequestId)
+          prSourceBranch: $(System.PullRequest.SourceBranch)
+          prTargetBranch: $(System.PullRequest.TargetBranch)
+
+- ${{ if ne(variables['Build.Reason'], 'PullRequest') }}:
+  - stage: CreatePackage
+    displayName: Create Package
+    jobs:
+    - job:
+      displayName: Create Package
+      pool:
+        vmImage: windows-latest
+      steps:
+      - checkout: Presidio.ExcelLibrary
+      - template: Artifacts\_Templates\packageFramework.yml@Pipelines
+        parameters:
+          solution: $(solution)
+          Project: $(project)
+          buildConfiguration: $(buildConfiguration)
+          artifactStagingDirectory: $(Build.ArtifactStagingDirectory)
+          defaultWorkingDirectory: $(System.DefaultWorkingDirectory)
+          vstsFeed: $(Artifacts.FeedId)

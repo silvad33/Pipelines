@@ -1,0 +1,43 @@
+# https://aka.ms/yaml
+
+parameters:
+- name: restoreBuildProjects
+  type: string
+  default: ''
+- name: buildConfiguration
+  type: string
+  default: ''
+- name: vstsFeed
+  type: string
+  default: ''
+
+steps:
+- task: DotNetCoreCLI@2
+  displayName: Restore
+  inputs:
+    command: restore
+    projects: ${{parameters.restoreBuildProjects}}
+    vstsFeed: ${{parameters.vstsFeed}}
+
+- task: DotNetCoreCLI@2
+  displayName: Build
+  inputs:
+    projects: ${{parameters.restoreBuildProjects}}
+    arguments: --configuration ${{parameters.buildConfiguration}}
+
+- task: DotNetCoreCLI@2
+  displayName: Pack
+  inputs:
+    command: pack
+    packagesToPack: ${{parameters.restoreBuildProjects}}
+
+- task: DotNetCoreCLI@2
+  displayName: Push
+  inputs:
+    command: push
+    publishVstsFeed: ${{parameters.vstsFeed}}
+
+- task: PublishSymbols@2
+  displayName: Publish Symbols Path
+  inputs:
+    SymbolServerType: TeamServices

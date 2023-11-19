@@ -1,0 +1,193 @@
+resources:
+  repositories:
+  - repository: BB8.Core
+    type: git
+    name: BB8.Core
+    trigger:
+      branches:
+        include:
+        - master
+        - prerelease/*
+  - repository: Pipelines
+    type: git
+    name: Pipelines
+    trigger: none
+
+variables:
+- group: Artifacts
+- group: ServiceConnections
+- group: Snyk
+- group: Telerik
+- name: solution
+  value: BB8.Core.sln
+- name: buildConfiguration
+  value: Debug
+- name: projectKey
+  value: BB8_BB8.Core_AYWdF9pLOJtL_g7lMS8L
+- name: buildNumberPrefix
+  value: BB8.Core
+- name: restoreBuildProjects
+  value: BB8.Core/BB8.Core.csproj
+- name: workingDirectory
+  value: BB8.Core
+- name: testDirectory
+  value: BB8.Core.Tests
+- name: testDll
+  value: BB8.Core.Tests/bin/Debug/net7.0/BB8.Core.Tests.dll
+- name: sonarQubeConnection
+  value: $(ServiceConnections.SonarQubeBB8.Core)
+- name: breakSonarQubefailure
+  value: false
+- name: snkyOrganizationId
+  value: $(Snyk.OrgIdMyPresidio)
+
+stages:
+- stage: SetBuildNumber
+  displayName: Set Build Number
+  jobs:
+
+  - ${{ if ne(variables['Build.Reason'], 'PullRequest') }}:
+    - job:
+      displayName: Set Build Number
+      pool:
+        vmImage: ubuntu-latest
+      steps:
+      - checkout: BB8.Core
+      - template: Artifacts\_Templates\setBuildId.yml@Pipelines
+        parameters:
+          buildSourceBranch: $(Build.SourceBranch)
+          buildNumberPrefix: $(buildNumberPrefix)
+          buildNumber: $(Build.BuildNumber)
+  - ${{ else }}:
+    - job:
+      displayName: Set Build Number
+      pool:
+        vmImage: ubuntu-latest
+      steps:
+      - checkout: BB8.Core
+      - template: Artifacts\_Templates\setBuildId.yml@Pipelines
+        parameters:
+          buildSourceBranch: $(Build.SourceBranch)
+          buildNumberPrefix: $(buildNumberPrefix)
+          buildNumber: $(Build.BuildNumber)
+          pullRequestId: $(System.PullRequest.PullRequestId)
+
+- stage: RunAutomatedTests
+  displayName: Run Automated Tests
+  jobs:
+  - job:
+    displayName: Run Automated Tests
+    pool:
+      vmImage: windows-latest
+    steps:
+    - checkout: BB8.Core
+    - template: Artifacts\_Templates\packageTest.yml@Pipelines
+      parameters:
+        solution: $(solution)
+        buildConfiguration: $(buildConfiguration)
+        vstsFeed: $(Artifacts.FeedId)
+        testDll: $(testDll)
+        userProfile: $(UserProfile)
+        justMockVersion: $(Telerik.JustMockVersion)
+- stage: CodeAnalysis
+  displayName: Code Analysis
+  jobs:
+  - job:
+    displayName: Run Snyk Scan
+    pool:
+      vmImage: windows-latest
+    steps:
+    - checkout: BB8.Core
+    - template: SnykScanners/_Templates/snyk.yml@Pipelines
+      parameters:
+        snykConnection: $(ServiceConnections.SnykAuthentication)
+        solution: $(solution)
+        buildConfiguration: $(buildConfiguration)
+        vstsFeed: $(Artifacts.FeedId)
+        snkyOrganizationId: $(snkyOrganizationId)
+
+  - ${{ if ne(variables['Build.Reason'], 'PullRequest') }}:
+    - job:
+      displayName: Run SonarQube Analysis
+      pool:
+        vmImage: windows-latest
+      steps:
+      - checkout: BB8.Core
+      - template: SonarQubeScanners/_Templates/sonarQube.yml@Pipelines
+        parameters:
+          sonarQubeConnection: $(sonarQubeConnection)
+          solution: $(solution)
+          buildConfiguration: $(buildConfiguration)
+          projectKey: $(projectKey)
+          vstsFeed: $(Artifacts.FeedId)
+          breakSonarQubefailure: '${{ variables.breakSonarQubefailure }}'
+          testDll: $(testDll)
+          userProfile: $(UserProfile)
+          justMockVersion: $(Telerik.JustMockVersion)
+  - ${{ else }}:
+    - job:
+      displayName: Run SonarQube Analysis
+      pool:
+        vmImage: windows-latest
+      steps:
+      - checkout: BB8.Core
+      - template: SonarQubeScanners/_Templates/sonarQube.yml@Pipelines
+        parameters:
+          sonarQubeConnection: $(sonarQubeConnection)
+          solution: $(solution)
+          buildConfiguration: $(buildConfiguration)
+          projectKey: $(projectKey)
+          vstsFeed: $(Artifacts.FeedId)
+          breakSonarQubefailure: '${{ variables.breakSonarQubefailure }}'
+          prId: $(System.PullRequest.PullRequestId)
+          testDll: $(testDll)
+          prSourceBranch: $(System.PullRequest.SourceBranch)
+          prTargetBranch: $(System.PullRequest.TargetBranch)
+          userProfile: $(UserProfile)
+          justMockVersion: $(Telerik.JustMockVersion)
+
+- ${{ if ne(variables['Build.Reason'], 'PullRequest') }}:
+  - stage: CreatePackage
+    displayName: Create Package
+    jobs:
+    - job:
+      displayName: Create Package
+      pool:
+        vmImage: ubuntu-latest
+      steps:
+      - checkout: BB8.Core
+
+      - template: Artifacts/_Templates/updateVersion.yml@Pipelines
+        parameters:
+          buildSourceBranch: $(Build.SourceBranch)
+          restoreBuildProjects: $(restoreBuildProjects)
+
+      - task: DotNetCoreCLI@2
+        displayName: Restore
+        inputs:
+          command: restore
+          projects: $(restoreBuildProjects)
+          vstsFeed: $(Artifacts.FeedId)
+
+      - task: DotNetCoreCLI@2
+        displayName: Build
+        inputs:
+          projects: $(restoreBuildProjects)
+          arguments: --configuration $(buildConfiguration)
+
+      - task: DotNetCoreCLI@2
+        displayName: Pack
+        inputs:
+          command: pack
+          packagesToPack: $(restoreBuildProjects)
+
+      - task: DotNetCoreCLI@2
+        displayName: Push
+        inputs:
+          command: push
+          publishVstsFeed: $(Artifacts.FeedId)
+
+      - task: PublishSymbols@2
+        displayName: Publish Symbols Path
+        inputs:
+          SymbolServerType: TeamServices

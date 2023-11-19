@@ -1,0 +1,1 @@
+& cmd /c "C:\agent\config.cmd remove --unattended --auth pat --token $Env:ADO_PAT"

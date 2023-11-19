@@ -1,0 +1,36 @@
+{
+	"api.version": "v1",
+	"source": {
+		"name": "Event Log",
+		"description": "Windows Event Logs",
+		"category":"win-onprem",
+		"automaticDateParsing": true,
+		"multilineProcessingEnabled": false,
+		"useAutolineMatching": false,
+		"forceTimeZone": false,
+		"cutoffTimestamp": 1674258258000,
+		"encoding": "UTF-8",
+		"hashAlgorithm": "MD5",
+		"allowlist": "",
+		"renderMessages": true,
+		"timeZone":"America/New_York",
+		"filters":[{
+		  "filterType":"Exclude",
+		  "name":"Exclude SSPS Messages",
+		  "regexp":".*Software Protection Platform Service.*"
+		}],
+       	"fields":{
+          "datatier": "windows_agents"
+       	},
+		"logNames": [
+			"Security",
+			"Application",
+			"System"
+		],
+		"denylist": "",
+		"eventFormat": 1,
+		"eventMessage": 0,
+		"sidStyle": 2,
+		"sourceType": "LocalWindowsEventLog"
+	}
+}

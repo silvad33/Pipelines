@@ -1,0 +1,139 @@
+# https://aka.ms/yaml
+
+resources:
+  repositories:
+  - repository: Pipelines
+    type: git
+    name: Pipelines
+    trigger: none
+  - repository: BackupRestoreManager
+    type: git
+    name: BackupRestoreManager
+    trigger: none
+
+variables:
+- group: ServiceConnections
+- group: AKSDeployments
+- group: Artifacts
+- group: ClearUnattachedAzureDisks
+- group: Snyk
+- group: Calico
+- name: buildNumberPrefix
+  value: Backup.Restore.DB.Dev
+- name: chartPath
+  value: 'HelmCharts/DBRestore/Chart'
+- name: kubernetesCluster
+  value: $(AKSDeployments.DataWarehouseCluster)
+- name: snkyOrganizationId
+  value: $(Snyk.OrgIdIntegrations)
+- name: containerRegistryName
+  value: presidiocontainers
+
+parameters:
+
+- name: dockerimagesNetCore
+  type: object
+  default:
+
+  - repository: backup-restore-db
+    displayName: Backup Restore DB
+    buildContext: 'BoomiService/BoomiService'
+    dockerfile: 'Pipelines/HelmCharts/DBRestore/DockerImages/DBRestore/Dockerfile'
+    failOnIssues: false
+
+- name: environments
+  type: object
+  default:
+
+  - displayName: 'Backup Restore DB'
+    namespace: automation-uat
+    valuesFile: HelmCharts/DBRestore/Chart/values.dbrestore.uat.yaml
+    releaseName: backup-restore-db
+    chartPath: 'HelmCharts/DBRestore/Chart'
+    helmArgs: "--create-namespace"
+
+stages:
+- stage: SetBuildNumber
+  displayName: Set Build Number
+  jobs:
+  - job:
+    displayName: Set Build Number
+    pool:
+      vmImage: ubuntu-latest
+    steps:
+    - task: PowerShell@2
+      displayName: Set Build Number
+      inputs:
+        pwsh: true
+        targetType: inline
+        script: Write-Host "##vso[build.updatebuildnumber]$(buildNumberPrefix)-$(Build.BuildNumber)"
+
+- stage: BuildDockerImages
+  displayName: Build Docker Images
+  jobs:
+  - ${{ each dockerimage in parameters.dockerimagesNetCore }}:
+    - job:
+      displayName: Build ${{ dockerimage.displayName }} Docker Image
+      pool:
+        vmImage: ubuntu-latest
+      steps:
+      - checkout: BoomiService
+      - checkout: Pipelines
+      - template: HelmCharts/_Templates/dockerApplicationsNetCore.yml@Pipelines
+        parameters:
+          repository: ${{ dockerimage.repository }}
+          buildContext: ${{ dockerimage.buildContext }}
+          dockerFile: ${{ dockerimage.dockerFile }}
+          failOnIssues: ${{ dockerimage.failOnIssues }}
+          containerRegistry: $(ServiceConnections.ContainerRegistry)
+          feedUrl: $(Artifacts.FeedUrl)
+          accessToken: $(Artifacts.AccessToken)
+          feedUser: $(Artifacts.User)
+          snykConnection: $(ServiceConnections.SnykAuthentication)
+          snkyOrganizationId: $(snkyOrganizationId)
+          buildId: $(Build.BuildId)
+          registryName: $(Snyk.RegistryName)
+          artifactStagingDirectory: $(Build.ArtifactStagingDirectory)
+          calicoApi: $(Calico.API)
+          calicoToken: $(Calico.Token)
+          azureSubscription: $(ServiceConnections.AzureResourceManager)
+          containerRegistryName: $(containerRegistryName)
+
+- stage: RunHelmCharts
+  displayName: Run Helm Charts
+  jobs:
+  - ${{ each env in parameters.environments }}:
+    - job:
+      displayName: Run ${{ env.displayName }} Helm Chart
+      pool:
+        vmImage: ubuntu-latest
+      steps:
+        - checkout: Pipelines
+
+        - task: PowerShell@2
+          displayName: Replace Tokens for Values YAML
+          inputs:
+            targetType: inline
+            pwsh: true
+            script: |
+              ((Get-Content -path ${{ env.valuesFile }} -Raw) -replace '~buildId~','$(Build.BuildId)') | Set-Content -Path ${{ env.valuesFile }}
+              Get-Content -path ${{ env.valuesFile }}
+
+        - task: HelmDeploy@0
+          displayName: Run Helm Chart
+          inputs:
+            connectionType: 'Azure Resource Manager'
+            azureSubscriptionEndpoint: $(ServiceConnections.AzureResourceManager)
+            azureResourceGroup: $(AKSDeployments.AKSResourceGroup)
+            kubernetesCluster: $(kubernetesCluster)
+            azureSubscriptionForACR: $(ServiceConnections.AzureResourceManager)
+            azureResourceGroupForACR: $(AKSDeployments.AKSResourceGroup)
+            azureContainerRegistry: $(ServiceConnections.ContainerRegistry)
+            namespace: ${{ env.namespace }}
+            chartPath: ${{ env.chartPath }}
+            valueFile: ${{ env.valuesFile }}
+            releaseName: ${{ env.releaseName }}
+            command: 'upgrade'
+            waitForExecution: true
+            chartType: 'FilePath'
+            arguments: ${{ env.helmArgs }}

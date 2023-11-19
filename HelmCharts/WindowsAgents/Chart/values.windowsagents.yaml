@@ -1,0 +1,98 @@
+nameOverride: "w"
+#fullnameOverride: ""
+
+adopat: ~adopat~
+adoOrgUrl: https://dev.azure.com/PresidioDev/
+agentPool: "Windows Agents"
+
+sumologic:
+  installtoken: ~sumoLogicInstallToken~
+
+replicaCount: 5
+
+image:
+  repository: presidiocontainers.azurecr.io/w
+  pullPolicy: Always
+  tag: "~buildId~"
+
+resources: {}
+  # limits:
+  #   cpu: 100m
+  #   memory: 128Mi
+  # requests:
+  #   cpu: 100m
+  #   memory: 128Mi
+
+hostAliases:
+- ip: "10.160.50.85"
+  hostnames:
+  - "hqcp12sql01"
+- ip: "10.10.22.128"
+  hostnames:
+  - "mosvr01"
+- ip: "10.10.22.135"
+  hostnames:
+  - "sva-cps-db01"
+- ip: "10.10.22.54"
+  hostnames:
+  - "sva-cpuat-db01"
+- ip: "10.10.11.34"
+  hostnames:
+  - "sva-gp-sql01"
+- ip: "10.10.22.134"
+  hostnames:
+  - "sva-gps-db01"
+- ip: "10.10.22.56"
+  hostnames:
+  - "sva-gpuat-db01"
+- ip: "10.10.10.170"
+  hostnames:
+  - "sva-mo-db01"
+- ip: "10.10.12.83"
+  hostnames:
+  - "sva-modemo-db01"
+- ip: "10.10.22.132"
+  hostnames:
+  - "sva-mos-db01"
+- ip: "10.10.13.60"
+  hostnames:
+  - "sva-motest-db01"
+- ip: "10.10.22.51"
+  hostnames:
+  - "sva-mouat-db01"
+- ip: "10.10.13.47"
+  hostnames:
+  - "sva-phxcyb-api"
+- ip: "10.10.11.149"
+  hostnames:
+  - "sva-phxstg-svc01"
+- ip: "10.10.12.80"
+  hostnames:
+  - "sva-phxt-db01"
+- ip: "10.10.12.102"
+  hostnames:
+  - "sva-phxt-qa01"
+- ip: "10.10.12.103"
+  hostnames:
+  - "sva-phxt-qa02"
+- ip: "10.10.13.48"
+  hostnames:
+  - "sva-phxt-qa03"
+- ip: "172.21.1.180"
+  hostnames:
+  - "sva-mouat-app01"
+
+affinity:
+  nodeAffinity:
+    preferredDuringSchedulingIgnoredDuringExecution:
+    - weight: 1
+      preference:
+        matchExpressions:
+        - key: kubernetes.azure.com/mode
+          operator: In
+          values:
+          - user
+        - key: kubernetes.io/os
+          operator: In
+          values:
+          - windows

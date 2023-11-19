@@ -1,0 +1,54 @@
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: "{{ include "backup-restore-db.fullname" . }}-{{ .Values.image.tag | default .Chart.AppVersion }}"
+spec:
+  backoffLimit: 1
+  template:
+    spec:
+      restartPolicy: Never
+      {{- with .Values.affinity }}
+      affinity:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.hostAliases }}
+      hostAliases:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      containers:
+      - name: "{{ include "backup-restore-db.fullname" . }}-{{ .Values.image.tag | default .Chart.AppVersion }}"
+        image: "{{ .Values.image.repository }}:{{ .Values.image.tag | default .Chart.AppVersion }}"
+        env:
+          - name: DOTNET_ENVIRONMENT
+            value: {{ .Values.environment }}
+          - name: MSSQL_SA_PASSWORD
+            valueFrom:
+              secretKeyRef:
+                name: secrets
+                key: saPassword
+          - name: keyDecryptionPassword
+            valueFrom:
+              secretKeyRef:
+                name: secrets
+                key: keyDecryptionPassword
+          - name: TZ
+            value: America/New_York
+          - name: DOTNET_SYSTEM_GLOBALIZATION_INVARIANT
+            value: "false"
+          - name: LC_ALL
+            value: en_US.UTF-8
+          - name: LANG
+            value: en_US.UTF-8
+        volumeMounts:
+          - name: cluster-config
+            mountPath: /clusterconfig/
+          - name: onprem-databases
+            mountPath: /mnt/sqldata/
+            readOnly: false
+      volumes:
+      - name: cluster-config
+        configMap:
+          name: cluster-config
+      - name: onprem-databases
+        persistentVolumeClaim:
+          claimName: pvc-onprem-databases

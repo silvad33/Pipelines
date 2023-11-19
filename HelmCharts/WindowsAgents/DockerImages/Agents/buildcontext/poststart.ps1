@@ -1,0 +1,2 @@
+& cmd /c "c:\temp\ntrights +r SeServiceLogonRight -u ContainerUser"
+& cmd /c "C:\temp\SumoCollector.exe -console -q `"-Vsumo.token_and_url=$Env:SUMO_LOGIC_INSTALLER_TOKEN`" -Vephemeral=true -VsyncSources=`"C:\sources`" -Vclobber=`"true`""

@@ -1,0 +1,47 @@
+#nameOverride: ""
+#fullnameOverride: ""
+
+sumoOtelEndpoint: https://endpoint4.collection.sumologic.com/receiver/v1/trace/ZaVnC4dhaV0mvT17dbjE5WqxhjOVmUQpWMhnMs9fXi7s_7HTYnugsCiGA8xioVJnEZaKG1UwUMmggt3eK1zfYzXvjm7lC5SPlu55p1yfngXt-dWKwItnDg==
+appConfigConnectionString: ~appConfigConnectionString~
+redisConnectionString: ~redisConnectionString~
+
+replicaCount: 3
+
+environment: cache-manager
+
+image:
+  repository: presidiocontainers.azurecr.io/cache-manager
+  pullPolicy: Always
+  tag: "~buildId~"
+
+resources: {}
+  # limits:
+  #   cpu: 100m
+  #   memory: 128Mi
+  # requests:
+  #   cpu: 100m
+  #   memory: 128Mi
+
+ingress:
+  enabled: true
+  className: "nginx"
+  hosts:
+    - host: cache-manager.presidio-internal.net
+      paths:
+        - path: /
+          pathType: ImplementationSpecific
+
+affinity:
+  nodeAffinity:
+    preferredDuringSchedulingIgnoredDuringExecution:
+    - weight: 1
+      preference:
+        matchExpressions:
+        - key: kubernetes.azure.com/mode
+          operator: In
+          values:
+          - user
+        - key: kubernetes.io/os
+          operator: In
+          values:
+          - linux

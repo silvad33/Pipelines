@@ -1,0 +1,44 @@
+{
+	"api.version": "v1",
+	"source": {
+		"name": "Performance",
+		"description": "Windows Performance Metrics",
+		"category":"win-onprem",
+		"automaticDateParsing": false,
+		"multilineProcessingEnabled": false,
+		"useAutolineMatching": false,
+		"forceTimeZone": false,
+		"filters": [],
+		"cutoffTimestamp": 0,
+		"encoding": "UTF-8",
+		"hashAlgorithm": "MD5",
+		"timeZone":"America/New_York",
+		"interval": 60000,
+		"fields":{
+	   		"datatier": "windows_agents"
+		},
+		"wmiQueries": [
+			{
+				"name": "CPU",
+				"query": "select * from Win32_PerfFormattedData_PerfOS_Processor"
+			},
+			{
+				"name": "Logical Disk",
+				"query": "select * from Win32_PerfFormattedData_PerfDisk_LogicalDisk"
+			},
+			{
+				"name": "Physical Disk",
+				"query": "select * from Win32_PerfFormattedData_PerfDisk_PhysicalDisk"
+			},
+			{
+				"name": "Memory",
+				"query": "select * from Win32_PerfFormattedData_PerfOS_Memory"
+			},
+			{
+				"name": "Network",
+				"query": "select * from Win32_PerfFormattedData_Tcpip_NetworkInterface"
+			}
+		],
+		"sourceType": "LocalWindowsPerfMon"
+	}
+}

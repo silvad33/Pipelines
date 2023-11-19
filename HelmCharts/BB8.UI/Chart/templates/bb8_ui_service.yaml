@@ -1,0 +1,15 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: "svc-{{ include "bb8-ui.fullname" . }}"
+  labels:
+    app.kubernetes.io/name: {{ include "bb8-ui.fullname" . }}
+spec:
+  ports:
+    - protocol: TCP
+      name: http
+      port: 80
+      targetPort: 80
+  selector:
+    app.kubernetes.io/name: {{ include "bb8-ui.fullname" . }}
+  type: ClusterIP

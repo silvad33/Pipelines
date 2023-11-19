@@ -1,0 +1,103 @@
+#nameOverride: ""
+#fullnameOverride: ""
+
+sumoOtelEndpoint: https://endpoint4.collection.sumologic.com/receiver/v1/trace/ZaVnC4dhaV2dBCAhf5Rvyi0WCXlQ170qdTolgFA2dSlnES1gscMm_oyuwv1TQiO7fU10mmFUvv8czwMYkg9SAJnIRKiU-uNaKiKd383PPaaiWEvN8s2QqA==
+appConfigConnectionString: Endpoint=https://bb8-ui-configuration.azconfig.io;Id=3Kfa;Secret=pMhY9tRM7pxLbhfe8Ye7OYFK+sS+dfHAW6Q3Su3iMVw=
+
+replicaCount: 3
+
+environment: qa3
+
+image:
+  repository: presidiocontainers.azurecr.io/bb8-ui
+  pullPolicy: Always
+  tag: "~buildId~"
+
+ingress:
+  enabled: true
+  className: "nginx"
+  hosts:
+    - host: subscription-management-qa3.presidio-internal.net
+      paths:
+        - path: /
+          pathType: ImplementationSpecific
+
+resources: {}
+  # limits:
+  #   cpu: 100m
+  #   memory: 128Mi
+  # requests:
+  #   cpu: 100m
+  #   memory: 128Mi
+
+hostAliases:
+- ip: "10.10.10.170"
+  hostnames:
+  - "sva-mo-db01"
+- ip: "10.10.12.112"
+  hostnames:
+  - "sva-phxt-qa02"
+- ip: "10.10.15.40"
+  hostnames:
+  - "phoenix-qa1.presidio.com"
+- ip: "10.10.15.41"
+  hostnames:
+  - "myorders-qa1.presidio.com"
+- ip: "10.10.15.38"
+  hostnames:
+  - "phoenix-api-qa1.presidio.com"
+- ip: "10.10.15.42"
+  hostnames:
+  - "phoenix-api-qa2.presidio.com"
+- ip: "10.10.15.59"
+  hostnames:
+  - "phoenix-api-qa3.presidio.com"
+- ip: "10.10.15.44"
+  hostnames:
+  - "phoenix-qa2.presidio.com"
+- ip: "10.10.15.45"
+  hostnames:
+  - "myorders-qa2.presidio.com"
+- ip: "10.10.15.56"
+  hostnames:
+  - "myorders-qa3.presidio.com"
+- ip: "10.10.15.58"
+  hostnames:
+  - "phoenix-qa3.presidio.com"
+- ip: "10.252.19.45"
+  hostnames:
+  - "aspx-forms-service.presidio.com"
+  - "qa-user-service.presidio-internal.net"
+- ip: "13.110.252.6"
+  hostnames:
+  - "presidio2--dev2.lightning.force.com"
+- ip: "172.21.1.112"
+  hostnames:
+  - "myorders.presidio.com"
+- ip: "172.21.1.120"
+  hostnames:
+  - "myorders-uat.presidio.com"
+- ip: "172.21.1.127"
+  hostnames:
+  - "myorders-api-uat.presidio.com"
+- ip: "172.21.1.131"
+  hostnames:
+  - "myorders-test.presidio.com"
+- ip: "172.21.1.209"
+  hostnames:
+  - "phoenix-uat.presidio.com"
+
+affinity:
+  nodeAffinity:
+    preferredDuringSchedulingIgnoredDuringExecution:
+    - weight: 1
+      preference:
+        matchExpressions:
+        - key: kubernetes.azure.com/mode
+          operator: In
+          values:
+          - user
+        - key: kubernetes.io/os
+          operator: In
+          values:
+          - linux

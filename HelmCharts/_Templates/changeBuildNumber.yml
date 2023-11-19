@@ -1,0 +1,23 @@
+# https://aka.ms/yaml
+
+parameters:
+- name: buildNumberPrefix
+  type: string
+  default: ''
+- name: buildId
+  type: string
+  default: ''
+- name: env
+  type: string
+  default: ''
+
+steps:
+
+- task: PowerShell@2
+  displayName: Set Build Number
+  inputs:
+    pwsh: true
+    targetType: inline
+    script: |
+      $currentDate = Get-Date -Format "yyyyMMdd"
+      Write-Host "##vso[build.updatebuildnumber]${{parameters.env}}-${{parameters.buildNumberPrefix}}-$currentDate.${{parameters.buildId}}"

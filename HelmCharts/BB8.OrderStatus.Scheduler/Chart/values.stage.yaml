@@ -1,0 +1,73 @@
+#nameOverride: ""
+#fullnameOverride: ""
+
+sumoOtelEndpoint: https://endpoint4.collection.sumologic.com/receiver/v1/trace/ZaVnC4dhaV20ZIKBmQIdqR1yBFD1FfQ22q_dFTi1Aaiq5sznHcCT25zLOPAiZRsRmrXBzhR3EjT0NgwzJQyzAU4e1dz4KpKx-o2AexwjOJyMEL0Nu7TtQw==
+appConfigConnectionString: ~appConfigConnectionString~
+msSQLSAPassword: ~msSQLSAPassword~
+msSQLQuartzPassword: ~msSQLQuartzPassword~
+
+quartzDBCreationScript: /bb8OrderStatus.sql
+
+replicaCount: 0
+
+environment: stage
+
+formerhost: SVA-PHXSTG-SVC01
+
+image:
+  repository: presidiocontainers.azurecr.io/bb8-orderstatus-scheduler
+  pullPolicy: Always
+  tag: "~buildId~"
+quartzimage:
+  repository: presidiocontainers.azurecr.io/quartz-bb8-orderstatus-scheduler
+  pullPolicy: Always
+  tag: "~buildId~"
+
+resources: {}
+  # limits:
+  #   cpu: 100m
+  #   memory: 128Mi
+  # requests:
+  #   cpu: 100m
+  #   memory: 128Mi
+
+ingress:
+  enabled: true
+  className: "nginx"
+  hosts:
+    - host: bb8-orderstatus-scheduler-stage.presidio-internal.net
+      paths:
+        - path: /
+          pathType: ImplementationSpecific
+
+hostAliases:
+- ip: "10.10.11.149"
+  hostnames:
+  - "cpsvr"
+  - "mosvr01"
+  - "mosvr02"
+  - "mosvr03"
+  - "gp2svr"
+  - "phxgw"
+  - "phxsvc01"
+  - "phxsvc02"
+  - "phxsvc03"
+  - "phxsvc04"
+- ip: "10.252.18.230"
+  hostnames:
+  - "rabbitmq-stage.presidio-internal.net"
+
+affinity:
+  nodeAffinity:
+    preferredDuringSchedulingIgnoredDuringExecution:
+    - weight: 1
+      preference:
+        matchExpressions:
+        - key: kubernetes.azure.com/mode
+          operator: In
+          values:
+          - user
+        - key: kubernetes.io/os
+          operator: In
+          values:
+          - linux

@@ -1,0 +1,449 @@
+resources:
+  repositories:
+  - repository: BB8.OrderStatus.Scheduler
+    type: git
+    name: BB8.OrderStatus.Scheduler
+    trigger:
+      branches:
+        include:
+        - deploy/*
+        - main
+        - develop
+  - repository: Pipelines
+    type: git
+    name: Pipelines
+    trigger: none
+
+variables:
+- group: ServiceConnections
+- group: Snyk
+- group: BB8OrderStatusScheduler
+- group: AKSDeployments
+- group: Artifacts
+- group: Calico
+- name: buildNumberPrefix
+  value: BB8.OrderStatus.Scheduler
+- name: projectKey
+  value: BB8_BB8.OrderStatus.Scheduler_AYc5BPTO31a6ne3EgJ-u
+- name: solution
+  value: BB8.OrderStatus.Scheduler.sln
+- name: buildConfiguration
+  value: Debug
+- name: testDll
+  value: BB8.OrderStatus.Scheduler.Tests/bin/Debug/net7.0/BB8.OrderStatus.Scheduler.Tests.dll
+- name: adoOrganization
+  value: PresidioDev
+- name: adoProjectName
+  value: BB8
+- name: sonarQubeConnection
+  value: $(ServiceConnections.SonarQubeBB8.OrderStatus.Scheduler)
+- name: breakSonarQubefailure
+  value: false
+- name: snkyOrganizationId
+  value: $(Snyk.OrgIdMyPresidio)
+- name: kubernetesCluster
+  value: $(AKSDeployments.MyPresidioSchedulersCluster)
+- name: containerRegistryName
+  value: presidiocontainers
+
+parameters:
+
+- name: dockerimagesNetCore
+  type: object
+  default:
+
+  - repository: bb8-orderstatus-scheduler
+    displayName: BB8 Order Status Scheduler
+    buildContext: 'BB8.OrderStatus.Scheduler/BB8.OrderStatus.Scheduler'
+    dockerfile: Pipelines/HelmCharts/BB8.OrderStatus.Scheduler/DockerImages/Scheduler/Dockerfile
+    appdll: BB8.OrderStatus.Scheduler.dll
+    failOnIssues: false
+
+- name: dockerimages
+  type: object
+  default:
+
+  - repository: quartz-bb8-orderstatus-scheduler
+    displayName: Quartz DB
+    buildContext: HelmCharts/BB8.OrderStatus.Scheduler/DockerImages/QuartzDB/buildcontext
+    dockerfile: HelmCharts/BB8.OrderStatus.Scheduler/DockerImages/QuartzDB/Dockerfile
+    failOnIssues: false
+
+- name: environments
+  type: object
+  default:
+
+  - namespace: development
+    chartPath: 'HelmCharts/BB8.OrderStatus.Scheduler/Chart'
+    valuesFile: HelmCharts/BB8.OrderStatus.Scheduler/Chart/values.development.yaml
+    releaseName: bb8-orderstatus-scheduler
+    displayName: Development
+    continueOnError: false
+    dependsOn: BuildDockerImages
+    adoEnvironment: ''
+    overrideBranch: refs/heads/deploy/development
+    mainBranchTrigger: true
+    newStatus: 'none'
+    newResult: ''
+
+  - namespace: qa1
+    chartPath: 'HelmCharts/BB8.OrderStatus.Scheduler/Chart'
+    valuesFile: HelmCharts/BB8.OrderStatus.Scheduler/Chart/values.qa1.yaml
+    releaseName: bb8-orderstatus-scheduler
+    displayName: QA1
+    continueOnError: false
+    dependsOn: development
+    adoEnvironment: MyPresidio OrderStatus Scheduler
+    overrideBranch: refs/heads/deploy/qa1
+    mainBranchTrigger: false
+    newStatus: 'none'
+    newResult: ''
+
+  - namespace: qa2
+    chartPath: 'HelmCharts/BB8.OrderStatus.Scheduler/Chart'
+    valuesFile: HelmCharts/BB8.OrderStatus.Scheduler/Chart/values.qa2.yaml
+    releaseName: bb8-orderstatus-scheduler
+    displayName: QA2
+    continueOnError: false
+    dependsOn: development
+    adoEnvironment: MyPresidio OrderStatus Scheduler
+    overrideBranch: refs/heads/deploy/qa2
+    mainBranchTrigger: false
+    newStatus: 'none'
+    newResult: ''
+
+  - namespace: qa3
+    chartPath: 'HelmCharts/BB8.OrderStatus.Scheduler/Chart'
+    valuesFile: HelmCharts/BB8.OrderStatus.Scheduler/Chart/values.qa3.yaml
+    releaseName: bb8-orderstatus-scheduler
+    displayName: QA3
+    continueOnError: false
+    dependsOn: development
+    adoEnvironment: MyPresidio OrderStatus Scheduler
+    overrideBranch: refs/heads/deploy/qa3
+    mainBranchTrigger: false
+    newStatus: 'none'
+    newResult: ''
+
+  - namespace: qa
+    chartPath: 'HelmCharts/BB8.OrderStatus.Scheduler/Chart'
+    valuesFile: HelmCharts/BB8.OrderStatus.Scheduler/Chart/values.qa.yaml
+    releaseName: bb8-orderstatus-scheduler
+    displayName: QA
+    continueOnError: false
+    dependsOn: development
+    adoEnvironment: MyPresidio OrderStatus Scheduler QA
+    overrideBranch: ''
+    mainBranchTrigger: false
+    newStatus: ''
+    newResult: ''
+
+  - namespace: uat
+    chartPath: 'HelmCharts/BB8.OrderStatus.Scheduler/Chart'
+    valuesFile: HelmCharts/BB8.OrderStatus.Scheduler/Chart/values.uat.yaml
+    releaseName: bb8-orderstatus-scheduler
+    displayName: UAT
+    continueOnError: false
+    dependsOn: qa
+    adoEnvironment: MyPresidio OrderStatus Scheduler UAT
+    overrideBranch: ''
+    mainBranchTrigger: false
+    newStatus: ''
+    newResult: ''
+
+  - namespace: cyber
+    chartPath: 'HelmCharts/BB8.OrderStatus.Scheduler/Chart'
+    valuesFile: HelmCharts/BB8.OrderStatus.Scheduler/Chart/values.cyber.yaml
+    releaseName: bb8-orderstatus-scheduler
+    displayName: Cyber
+    continueOnError: false
+    dependsOn: uat
+    adoEnvironment: MyPresidio OrderStatus Scheduler Cyber
+    overrideBranch: ''
+    mainBranchTrigger: false
+    newStatus: 'none'
+    newResult: ''
+
+  - namespace: stage
+    chartPath: 'HelmCharts/BB8.OrderStatus.Scheduler/Chart'
+    valuesFile: HelmCharts/BB8.OrderStatus.Scheduler/Chart/values.stage.yaml
+    releaseName: bb8-orderstatus-scheduler
+    displayName: Stage
+    continueOnError: false
+    dependsOn: uat
+    adoEnvironment: MyPresidio OrderStatus Scheduler Stage
+    overrideBranch: ''
+    mainBranchTrigger: false
+    newStatus: 'none'
+    newResult: ''
+
+  - namespace: production
+    chartPath: 'HelmCharts/BB8.OrderStatus.Scheduler/Chart'
+    valuesFile: HelmCharts/BB8.OrderStatus.Scheduler/Chart/values.production.yaml
+    releaseName: bb8-orderstatus-scheduler
+    displayName: Production
+    continueOnError: false
+    dependsOn: uat
+    adoEnvironment: MyPresidio OrderStatus Scheduler Production
+    overrideBranch: ''
+    mainBranchTrigger: false
+    newStatus: ''
+    newResult: ''
+
+  - namespace: demo
+    chartPath: 'HelmCharts/BB8.OrderStatus.Scheduler/Chart'
+    valuesFile: HelmCharts/BB8.OrderStatus.Scheduler/Chart/values.demo.yaml
+    releaseName: bb8-orderstatus-scheduler
+    displayName: Demo
+    continueOnError: false
+    dependsOn: production
+    adoEnvironment: ''
+    overrideBranch: ''
+    mainBranchTrigger: false
+    newStatus: 'completed'
+    newResult: 'succeeded'
+
+stages:
+- stage: InitializeBuild
+  displayName: Initialize Build
+  jobs:
+  - ${{ if eq(variables['Build.Reason'], 'PullRequest') }}:
+    - job:
+      displayName: Set PR Build Number
+      pool:
+        vmImage: ubuntu-latest
+      steps:
+      - template: HelmCharts/_Templates/changeBuildNumber.yml@Pipelines
+        parameters:
+          buildNumberPrefix: $(buildNumberPrefix)
+          buildId: $(Build.BuildId)
+          env: PR$(System.PullRequest.PullRequestId)
+  - ${{ else }}:
+    - job:
+      displayName: Set Build Number
+      pool:
+        vmImage: ubuntu-latest
+      steps:
+      - template: HelmCharts/_Templates/changeBuildNumber.yml@Pipelines
+        parameters:
+          buildNumberPrefix: $(buildNumberPrefix)
+          buildId: $(Build.BuildId)
+          env: '[Not Deployed]'
+
+- stage: CodeAnalysis
+  displayName: Code Analysis
+  jobs:
+  - job:
+    displayName: Run Snyk Scan
+    pool:
+      vmImage: windows-latest
+    steps:
+    - checkout: BB8.OrderStatus.Scheduler
+    - template: SnykScanners/_Templates/snyk.yml@Pipelines
+      parameters:
+        snykConnection: $(ServiceConnections.SnykAuthentication)
+        solution:  ${{ variables.solution }}
+        buildConfiguration: ${{ variables.buildConfiguration }}
+        vstsFeed: $(Artifacts.FeedId)
+        snkyOrganizationId: $(snkyOrganizationId)
+
+  - ${{ if ne(variables['Build.Reason'], 'PullRequest') }}:
+    - job:
+      displayName: Run SonarQube Analysis
+      pool:
+        vmImage: windows-latest
+      steps:
+      - checkout: BB8.OrderStatus.Scheduler
+      - template: SonarQubeScanners/_Templates/sonarQube.yml@Pipelines
+        parameters:
+          sonarQubeConnection: $(sonarQubeConnection)
+          solution: ${{ variables.solution }}
+          buildConfiguration: ${{ variables.buildConfiguration }}
+          projectKey: ${{ variables.projectKey }}
+          vstsFeed: $(Artifacts.FeedId)
+          breakSonarQubefailure: '${{ variables.breakSonarQubefailure }}'
+          testDll: ${{ variables.testDll }}
+  - ${{ else }}:
+    - job:
+      displayName: Run SonarQube Analysis
+      pool:
+        vmImage: windows-latest
+      steps:
+      - checkout: BB8.OrderStatus.Scheduler
+      - template: SonarQubeScanners/_Templates/sonarQube.yml@Pipelines
+        parameters:
+          sonarQubeConnection: $(sonarQubeConnection)
+          solution: ${{ variables.solution }}
+          buildConfiguration: ${{ variables.buildConfiguration }}
+          projectKey: ${{ variables.projectKey }}
+          vstsFeed: $(Artifacts.FeedId)
+          breakSonarQubefailure: '${{ variables.breakSonarQubefailure }}'
+          testDll: ${{ variables.testDll }}
+          prId: $(System.PullRequest.PullRequestId)
+          prSourceBranch: $(System.PullRequest.SourceBranch)
+          prTargetBranch: $(System.PullRequest.TargetBranch)
+
+- stage: BuildDockerImages
+  displayName: Build Docker Images
+  jobs:
+  - ${{ each dockerimage in parameters.dockerimagesNetCore }}:
+    - job:
+      displayName: Build ${{ dockerimage.displayName }} Docker Image
+      pool:
+        vmImage: ubuntu-latest
+      steps:
+      - checkout: BB8.OrderStatus.Scheduler
+      - checkout: Pipelines
+      - template: HelmCharts/_Templates/dockerApplicationsNetCore.yml@Pipelines
+        parameters:
+          repository: ${{ dockerimage.repository }}
+          buildContext: ${{ dockerimage.buildContext }}
+          dockerFile: ${{ dockerimage.dockerFile }}
+          failOnIssues: ${{ dockerimage.failOnIssues }}
+          appdll: ${{ dockerimage.appDll }}
+          containerRegistry: $(ServiceConnections.ContainerRegistry)
+          feedUrl: $(Artifacts.FeedUrl)
+          accessToken: $(Artifacts.AccessToken)
+          feedUser: $(Artifacts.User)
+          snykConnection: $(ServiceConnections.SnykAuthentication)
+          snkyOrganizationId: $(snkyOrganizationId)
+          buildId: $(Build.BuildId)
+          registryName: $(Snyk.RegistryName)
+          artifactStagingDirectory: $(Build.ArtifactStagingDirectory)
+          calicoApi: $(Calico.API)
+          calicoToken: $(Calico.Token)
+          azureSubscription: $(ServiceConnections.AzureResourceManager)
+          containerRegistryName: $(containerRegistryName)
+  - ${{ each dockerimage in parameters.dockerimages }}:
+    - job:
+      displayName: Build ${{ dockerimage.displayName }} Docker Image
+      pool:
+        vmImage: ubuntu-latest
+      steps:
+      - template: HelmCharts/_Templates/dockerApplications.yml@Pipelines
+        parameters:
+          repository: ${{ dockerimage.repository }}
+          buildContext: ${{ dockerimage.buildContext }}
+          dockerFile: ${{ dockerimage.dockerFile }}
+          failOnIssues: ${{ dockerimage.failOnIssues }}
+          containerRegistry: $(ServiceConnections.ContainerRegistry)
+          snykConnection: $(ServiceConnections.SnykAuthentication)
+          snkyOrganizationId: $(snkyOrganizationId)
+          buildId: $(Build.BuildId)
+          registryName: $(Snyk.RegistryName)
+          artifactStagingDirectory: $(Build.ArtifactStagingDirectory)
+          calicoApi: $(Calico.API)
+          calicoToken: $(Calico.Token)
+
+- ${{ each env in parameters.environments }}:
+  - ${{ if ne(variables['Build.Reason'], 'PullRequest') }}:
+    - stage: ${{ env.namespace }}
+      displayName: Deploy ${{ env.displayName }}
+      dependsOn: ${{ env.dependsOn }}
+      jobs:
+      - ${{ if or(eq(variables['Build.SourceBranch'], env.overrideBranch), eq(env.adoEnvironment, ''), and(ne(variables['Build.Reason'], 'Manual'), eq(env.mainBranchTrigger, true), eq(variables['Build.SourceBranch'], variables.mainBranch))) }}:
+        - job:
+          displayName: Deploy ${{ env.displayName }}
+          pool:
+            vmImage: ubuntu-latest
+          steps:
+          - checkout: Pipelines
+          - task: PowerShell@2
+            displayName: Replace Tokens for Values YAML
+            inputs:
+              targetType: inline
+              pwsh: true
+              script: |
+                ((Get-Content -path ${{ env.valuesFile }} -Raw) -replace '~msSQLSAPassword~','$(BB8OrderStatusScheduler.MSSQL_SA_PASSWORD)') | Set-Content -Path ${{ env.valuesFile }}
+                ((Get-Content -path ${{ env.valuesFile }} -Raw) -replace '~msSQLQuartzPassword~','$(BB8OrderStatusScheduler.MSSQL_QUARTZ_PASSWORD)') | Set-Content -Path ${{ env.valuesFile }}
+                ((Get-Content -path ${{ env.valuesFile }} -Raw) -replace '~appConfigConnectionString~','$(BB8OrderStatusScheduler.AppConfigConnectionString)') | Set-Content -Path ${{ env.valuesFile }}
+                ((Get-Content -path ${{ env.valuesFile }} -Raw) -replace '~buildId~','$(Build.BuildId)') | Set-Content -Path ${{ env.valuesFile }}
+                Get-Content -path ${{ env.valuesFile }}
+          - template: HelmCharts/_Templates/runHelmChart.yml@Pipelines
+            parameters:
+              azureSubscriptionEndpoint: $(ServiceConnections.AzureResourceManager)
+              azureResourceGroup: $(AKSDeployments.AKSResourceGroup)
+              cluster: $(kubernetesCluster)
+              azureSubscriptionForACR: $(ServiceConnections.AzureResourceManager)
+              azureResourceGroupForACR: $(AKSDeployments.AKSResourceGroup)
+              containerRegistry: $(ServiceConnections.ContainerRegistry)
+              namespace: ${{ env.namespace }}
+              chartPath: ${{ env.chartPath }}
+              valueFile: ${{ env.valuesFile }}
+              releaseName: ${{ env.releaseName }}
+          - ${{ if ne(env.newStatus, '') }}:
+            - template: HelmCharts/_Templates/changeBuildStatus.yml@Pipelines
+              parameters:
+                accessToken: $(Artifacts.AccessToken)
+                buildId: $(Build.BuildId)
+                adoOrganization: $(adoOrganization)
+                adoProjectName: $(adoProjectName)
+                newStatus: ${{ env.newStatus }}
+          - ${{ if ne(env.newResult, '') }}:
+            - template: HelmCharts/_Templates/changeBuildResult.yml@Pipelines
+              parameters:
+                accessToken: $(Artifacts.AccessToken)
+                buildId: $(Build.BuildId)
+                adoOrganization: $(adoOrganization)
+                adoProjectName: $(adoProjectName)
+                newResult: ${{ env.newResult }}
+          - template: HelmCharts/_Templates/changeBuildNumber.yml@Pipelines
+            parameters:
+              buildNumberPrefix: $(buildNumberPrefix)
+              buildId: $(Build.BuildId)
+              env: ${{ env.displayName }}
+      - ${{ else }}:
+        - deployment:
+          displayName: Deploy ${{ env.displayName }}
+          pool:
+            vmImage: ubuntu-latest
+          environment: ${{ env.adoEnvironment }}
+          strategy:
+            runOnce:
+              deploy:
+                steps:
+                - checkout: Pipelines
+                - task: PowerShell@2
+                  displayName: Replace Tokens for Values YAML
+                  inputs:
+                    targetType: inline
+                    pwsh: true
+                    script: |
+                      ((Get-Content -path ${{ env.valuesFile }} -Raw) -replace '~msSQLSAPassword~','$(BB8OrderStatusScheduler.MSSQL_SA_PASSWORD)') | Set-Content -Path ${{ env.valuesFile }}
+                      ((Get-Content -path ${{ env.valuesFile }} -Raw) -replace '~msSQLQuartzPassword~','$(BB8OrderStatusScheduler.MSSQL_QUARTZ_PASSWORD)') | Set-Content -Path ${{ env.valuesFile }}
+                      ((Get-Content -path ${{ env.valuesFile }} -Raw) -replace '~appConfigConnectionString~','$(BB8OrderStatusScheduler.AppConfigConnectionString)') | Set-Content -Path ${{ env.valuesFile }}
+                      ((Get-Content -path ${{ env.valuesFile }} -Raw) -replace '~buildId~','$(Build.BuildId)') | Set-Content -Path ${{ env.valuesFile }}
+                      Get-Content -path ${{ env.valuesFile }}
+                - template: HelmCharts/_Templates/runHelmChart.yml@Pipelines
+                  parameters:
+                    azureSubscriptionEndpoint: $(ServiceConnections.AzureResourceManager)
+                    azureResourceGroup: $(AKSDeployments.AKSResourceGroup)
+                    cluster: $(kubernetesCluster)
+                    azureSubscriptionForACR: $(ServiceConnections.AzureResourceManager)
+                    azureResourceGroupForACR: $(AKSDeployments.AKSResourceGroup)
+                    containerRegistry: $(ServiceConnections.ContainerRegistry)
+                    namespace: ${{ env.namespace }}
+                    chartPath: ${{ env.chartPath }}
+                    valueFile: ${{ env.valuesFile }}
+                    releaseName: ${{ env.releaseName }}
+                - ${{ if ne(env.newStatus, '') }}:
+                  - template: HelmCharts/_Templates/changeBuildStatus.yml@Pipelines
+                    parameters:
+                      accessToken: $(Artifacts.AccessToken)
+                      buildId: $(Build.BuildId)
+                      adoOrganization: $(adoOrganization)
+                      adoProjectName: $(adoProjectName)
+                      newStatus: ${{ env.newStatus }}
+                - ${{ if ne(env.newResult, '') }}:
+                  - template: HelmCharts/_Templates/changeBuildResult.yml@Pipelines
+                    parameters:
+                      accessToken: $(Artifacts.AccessToken)
+                      buildId: $(Build.BuildId)
+                      adoOrganization: $(adoOrganization)
+                      adoProjectName: $(adoProjectName)
+                      newResult: ${{ env.newResult }}
+                - template: HelmCharts/_Templates/changeBuildNumber.yml@Pipelines
+                  parameters:
+                    buildNumberPrefix: $(buildNumberPrefix)
+                    buildId: $(Build.BuildId)
+                    env: ${{ env.displayName }}

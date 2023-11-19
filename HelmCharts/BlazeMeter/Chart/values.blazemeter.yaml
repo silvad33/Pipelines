@@ -1,0 +1,22 @@
+#nameOverride: ""
+#fullnameOverride: ""
+
+authToken: ~authToken~
+replicaCount: 3
+harbor_id: 65049912f6b4f65a3d08abc7
+ship_id: 650499688c88414e5208ea86
+
+affinity:
+  nodeAffinity:
+    preferredDuringSchedulingIgnoredDuringExecution:
+    - weight: 1
+      preference:
+        matchExpressions:
+        - key: kubernetes.azure.com/mode
+          operator: In
+          values:
+          - user
+        - key: kubernetes.io/os
+          operator: In
+          values:
+          - linux

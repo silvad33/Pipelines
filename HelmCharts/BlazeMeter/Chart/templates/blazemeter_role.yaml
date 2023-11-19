@@ -1,0 +1,57 @@
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+    name: role-crane
+rules:
+  - verbs:
+      - create
+    apiGroups:
+      - ''
+    resources:
+      - pods/exec
+  - verbs:
+      - get
+      - list
+    apiGroups:
+      - ''
+    resources:
+      - pods
+      - pods/log
+  - verbs:
+      - get
+      - list
+      - watch
+      - create
+      - update
+      - patch
+      - delete
+      - deletecollection
+      - createcollection
+    apiGroups:
+      - extensions
+      - apps
+      - ''
+    resources:
+      - pods
+      - services
+      - endpoints
+      - daemonsets
+      - pods/*
+      - pods/exec
+      - deployments
+      - replicasets
+      - ingresses
+      - deployments/scale
+  - verbs:
+      - watch
+      - get
+      - list
+      - create
+      - update
+      - patch
+      - delete
+      - deletecollection
+    apiGroups:
+      - batch
+    resources:
+      - jobs

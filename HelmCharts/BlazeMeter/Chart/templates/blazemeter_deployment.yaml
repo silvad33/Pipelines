@@ -1,0 +1,80 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: crane
+  labels:
+    role: role-crane
+    harbor_id: {{ .Values.harbor_id }}
+    ship_id: {{ .Values.ship_id }}
+spec:
+  replicas: {{ .Values.replicaCount }}
+  selector:
+    matchLabels:
+      role: role-crane
+      harbor_id:  {{ .Values.harbor_id }}
+      ship_id: {{ .Values.ship_id }}
+  strategy:
+    type: Recreate
+  template:
+    metadata:
+      labels:
+        role: role-crane
+        harbor_id:  {{ .Values.harbor_id }}
+        ship_id: {{ .Values.ship_id }}
+    spec:
+      {{- with .Values.affinity }}
+      affinity:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.hostAliases }}
+      hostAliases:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      restartPolicy: Always
+      terminationGracePeriodSeconds: 30
+      containers:
+      - name: "bzm-crane-{{ .Values.ship_id }}"
+        image: "blazemeter/crane:latest"
+        imagePullPolicy: Always
+        livenessProbe:
+          failureThreshold: 3
+          httpGet:
+            path: /healtz
+            port: 5000
+            scheme: HTTP
+          initialDelaySeconds: 300
+          periodSeconds: 15
+          successThreshold: 1
+          timeoutSeconds: 10
+        readinessProbe:
+          failureThreshold: 3
+          httpGet:
+            path: /healtz
+            port: 5000
+            scheme: HTTP
+          initialDelaySeconds: 5
+          periodSeconds: 15
+          successThreshold: 1
+          timeoutSeconds: 10
+        env:
+        - name: HARBOR_ID
+          value:  {{ .Values.harbor_id }}
+        - name: SHIP_ID
+          value: {{ .Values.ship_id }}
+        - name: AUTH_TOKEN
+          valueFrom:
+            secretKeyRef:
+              name: {{ include "blazemeter.fullname" . }}
+              key: authToken
+        - name: DOCKER_PORT_RANGE
+          value: 6000-7000
+        - name: CONTAINER_MANAGER_TYPE
+          value: KUBERNETES
+        - name: IMAGE_OVERRIDES
+          value: "{}"
+        - name: DOCKER_REGISTRY
+          value: gcr.io/verdant-bulwark-278
+        - name: AUTO_KUBERNETES_UPDATE
+          value: "true"
+        - name: RUN_HEALTH_WEB_SERVICE
+          value: "true"

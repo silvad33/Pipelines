@@ -1,0 +1,42 @@
+# https://aka.ms/yaml
+
+parameters:
+- name: repository
+  type: string
+  default: ''
+- name: buildContext
+  type: string
+  default: ''
+- name: dockerFile
+  type: string
+  default: ''
+- name: containerRegistry
+  type: string
+  default: ''
+- name: buildId
+  type: string
+  default: ''
+
+steps:
+
+- task: Docker@2
+  displayName: Docker Build
+  inputs:
+    containerRegistry: ${{parameters.containerRegistry}}
+    repository: ${{parameters.repository}}
+    command: build
+    Dockerfile: ${{parameters.dockerFile}}
+    buildContext: ${{parameters.buildContext}}
+    tags: |
+      latest
+      ${{parameters.buildId}}
+
+- task: Docker@2
+  displayName: Docker Push
+  inputs:
+    containerRegistry: ${{parameters.containerRegistry}}
+    repository: ${{parameters.repository}}
+    command: push
+    tags: |
+      latest
+      ${{parameters.buildId}}

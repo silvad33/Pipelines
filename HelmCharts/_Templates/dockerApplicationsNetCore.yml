@@ -1,0 +1,158 @@
+# https://aka.ms/yaml
+
+parameters:
+- name: repository
+  type: string
+  default: ''
+- name: buildContext
+  type: string
+  default: ''
+- name: accessToken
+  type: string
+  default: ''
+- name: dockerFile
+  type: string
+  default: ''
+- name: containerRegistry
+  type: string
+  default: ''
+- name: feedUrl
+  type: string
+  default: ''
+- name: feedUser
+  type: string
+  default: ''
+- name: appdll
+  type: string
+  default: ''
+- name: snykConnection
+  type: string
+  default: ''
+- name: failOnIssues
+  type: boolean
+  default: false
+- name: snkyOrganizationId
+  type: string
+  default: ''
+- name: buildId
+  type: string
+  default: ''
+- name: registryName
+  type: string
+  default: ''
+- name: artifactStagingDirectory
+  type: string
+  default: ''
+- name: calicoApi
+  type: string
+  default: ''
+- name: calicoToken
+  type: string
+  default: ''
+- name: azureSubscription
+  type: string
+  default: ''
+- name: containerRegistryName
+  type: string
+  default: ''
+
+steps:
+
+- task: PowerShell@2
+  displayName: Build Docker Arguments List
+  inputs:
+    pwsh: true
+    targetType: inline
+    script: |
+      $arguments = "--build-arg FEED_USER=${{parameters.feedUser}} --build-arg FEED_ACCESS_TOKEN=${{parameters.accessToken}} --build-arg FEED_URL=${{parameters.feedUrl}}"
+      if ('${{parameters.appdll}}' -ne '') {
+        $arguments = $arguments + " --build-arg APP_DLL=${{parameters.appdll}}"
+      }
+
+      Write-Host "##vso[task.setvariable variable=ARGUMENTS]$arguments"
+
+- task: Docker@2
+  displayName: Docker Vulnerability Scan Build
+  inputs:
+    containerRegistry: ${{parameters.containerRegistry}}
+    repository: ${{parameters.repository}}-vulnerability-scan
+    command: build
+    Dockerfile: ${{parameters.dockerFile}}
+    buildContext: ${{parameters.buildContext}}
+    arguments: '$(ARGUMENTS)'
+
+- ${{ if ne(parameters.snykConnection, '') }}:
+
+  - task: Docker@2
+    displayName: Docker Vulnerability Scan Push
+    inputs:
+      containerRegistry: ${{parameters.containerRegistry}}
+      repository: ${{parameters.repository}}-vulnerability-scan
+      command: push
+
+  - task: Snyk.snyk-security-scan.custom-build-release-task.SnykSecurityScan@1
+    displayName: Run Snyk Scan
+    continueOnError: true
+    inputs:
+      serviceConnectionEndpoint: '${{parameters.snykConnection}}'
+      testType: container
+      dockerImageName: ${{parameters.registryName}}/${{parameters.repository}}-vulnerability-scan:${{parameters.buildId}}
+      dockerFilePath: ${{parameters.dockerFile}}
+      severityThreshold: low
+      monitorWhen: always
+      failOnIssues: '${{parameters.failOnIssues}}'
+      organization: ${{parameters.snkyOrganizationId}}
+
+- ${{ if ne(parameters.calicoToken, '') }}:
+  - task: CmdLine@2
+    displayName: Run Calico Scan
+    inputs:
+      script: |
+        curl -Lo tigera-scanner https://installer.calicocloud.io/tigera-scanner/v3.17.1-4/image-assurance-scanner-cli-linux-amd64
+        chmod +x ./tigera-scanner
+        ./tigera-scanner scan ${{parameters.registryName}}/${{parameters.repository}}-vulnerability-scan:${{parameters.buildId}} --output_file ${{parameters.artifactStagingDirectory}}/calico_results.json --apiurl ${{parameters.calicoApi}} --token ${{parameters.calicoToken}} || true
+- ${{ else }}:
+  - task: CmdLine@2
+    displayName: Run Calico Scan
+    inputs:
+      script: |
+        curl -Lo tigera-scanner https://installer.calicocloud.io/tigera-scanner/v3.17.1-4/image-assurance-scanner-cli-linux-amd64
+        chmod +x ./tigera-scanner
+        ./tigera-scanner scan ${{parameters.registryName}}/${{parameters.repository}}-vulnerability-scan:${{parameters.buildId}} --output_file ${{parameters.artifactStagingDirectory}}/calico_results.json || true
+
+- task: PublishBuildArtifacts@1
+  displayName: 'Publish Calico Reports'
+  inputs:
+    PathtoPublish: ${{parameters.artifactStagingDirectory}}
+
+- ${{ if ne(parameters.containerRegistryName, '') }}:
+  - task: AzureCLI@2
+    displayName: Delete Vulnerability Scan Repository
+    inputs:
+      azureSubscription: ${{parameters.azureSubscription}}
+      scriptType: pscore
+      scriptLocation: inlineScript
+      inlineScript: az acr repository delete --name ${{parameters.containerRegistryName}} --repository ${{parameters.repository}}-vulnerability-scan -y
+
+- task: Docker@2
+  displayName: Docker Build
+  inputs:
+    containerRegistry: ${{parameters.containerRegistry}}
+    repository: ${{parameters.repository}}
+    command: build
+    Dockerfile: ${{parameters.dockerFile}}
+    buildContext: ${{parameters.buildContext}}
+    arguments: '--build-arg APP_DLL=${{parameters.appdll}} --build-arg FEED_USER=${{parameters.feedUser}} --build-arg FEED_ACCESS_TOKEN=${{parameters.accessToken}} --build-arg FEED_URL=${{parameters.feedUrl}}'
+    tags: |
+      latest
+      ${{parameters.buildId}}
+
+- task: Docker@2
+  displayName: Docker Push
+  inputs:
+    containerRegistry: ${{parameters.containerRegistry}}
+    repository: ${{parameters.repository}}
+    command: push
+    tags: |
+      latest
+      ${{parameters.buildId}}

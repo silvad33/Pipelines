@@ -1,0 +1,91 @@
+resources:
+  repositories:
+  - repository: Pipelines
+    type: git
+    name: Pipelines
+    trigger:
+      branches:
+        include:
+        - main
+      paths:
+        include:
+        - HelmCharts/BlazeMeter
+
+variables:
+- group: ServiceConnections
+- group: BlazeMeter
+- group: AKSDeployments
+- name: buildNumberPrefix
+  value: BlazeMeter
+- name: kubernetesCluster
+  value: $(AKSDeployments.POC)
+
+parameters:
+
+- name: environments
+  type: object
+  default:
+
+  - namespace: blazemeter
+    valuesFile: HelmCharts/BlazeMeter/Chart/values.blazemeter.yaml
+    releaseName: blazemeter
+    displayName: BlazeMeter
+    continueOnError: false
+    chartPath: 'HelmCharts/BlazeMeter/Chart'
+    helmArgs: "--create-namespace --timeout 5m0s"
+
+stages:
+- stage: SetBuildNumber
+  displayName: Set Build Number
+  jobs:
+  - job:
+    displayName: Set Build Number
+    pool:
+      vmImage: ubuntu-latest
+    steps:
+    - task: PowerShell@2
+      displayName: Set Build Number
+      inputs:
+        pwsh: true
+        targetType: inline
+        script: Write-Host "##vso[build.updatebuildnumber]$(buildNumberPrefix)-$(Build.BuildNumber)"
+
+- ${{ each env in parameters.environments }}:
+  - stage:
+    displayName: Run ${{ env.displayName }} Helm Chart
+    jobs:
+    - job:
+      displayName: Run ${{ env.displayName }} Helm Chart
+      pool:
+        vmImage: ubuntu-latest
+      steps:
+        - checkout: Pipelines
+
+        - task: PowerShell@2
+          displayName: Replace Tokens for Values YAML
+          inputs:
+            targetType: inline
+            pwsh: true
+            script: |
+              ((Get-Content -path ${{ env.valuesFile }} -Raw) -replace '~authToken~','$(BlazeMeter.AuthToken)') | Set-Content -Path ${{ env.valuesFile }}
+              Get-Content -path ${{ env.valuesFile }}
+
+        - task: HelmDeploy@0
+          displayName: Run Helm Chart
+          continueOnError: ${{ env.continueOnError }}
+          inputs:
+            connectionType: 'Azure Resource Manager'
+            azureSubscriptionEndpoint: $(ServiceConnections.AzureResourceManager)
+            azureResourceGroup: $(AKSDeployments.AKSResourceGroup)
+            kubernetesCluster: $(kubernetesCluster)
+            azureSubscriptionForACR: $(ServiceConnections.AzureResourceManager)
+            azureResourceGroupForACR: $(AKSDeployments.AKSResourceGroup)
+            azureContainerRegistry: $(ServiceConnections.ContainerRegistry)
+            namespace: ${{ env.namespace }}
+            chartPath: ${{ env.chartPath }}
+            valueFile: ${{ env.valuesFile }}
+            releaseName: ${{ env.releaseName }}
+            command: 'upgrade'
+            waitForExecution: true
+            chartType: 'FilePath'
+            arguments: ${{ env.helmArgs }}

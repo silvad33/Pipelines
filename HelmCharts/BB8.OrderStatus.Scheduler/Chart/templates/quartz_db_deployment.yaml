@@ -1,0 +1,78 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: "quartz-{{ include "bb8-orderstatus-scheduler.fullname" . }}"
+  labels:
+    app: "quartz-{{ include "bb8-orderstatus-scheduler.fullname" . }}"
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: "quartz-{{ include "bb8-orderstatus-scheduler.fullname" . }}"
+  template:
+    metadata:
+      labels:
+        app: "quartz-{{ include "bb8-orderstatus-scheduler.fullname" . }}"
+    spec:
+      {{- with .Values.affinity }}
+      affinity:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      containers:
+        - name: mssql-server
+          image: mcr.microsoft.com/mssql/server:2022-latest
+          ports:
+            - containerPort: 1433
+              protocol: TCP
+          env:
+            - name: 'TZ'
+              value: 'America/New_York'
+            - name: MSSQL_PID
+              value: Developer
+            - name: ACCEPT_EULA
+              value: 'Y'
+            - name: MSSQL_SA_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: "quartz-{{ include "bb8-orderstatus-scheduler.fullname" . }}"
+                  key: msSQLSAPassword
+          lifecycle:
+            postStart:
+              exec:
+                command:
+                  - /bin/sh
+                  - '-c'
+                  - echo 1048576 > /proc/sys/fs/aio-max-nr
+          resources: {}
+          volumeMounts:
+            - name: mssqldb
+              mountPath: /var/opt/mssql
+          securityContext:
+            privileged: true
+        - name: "quartz-{{ include "bb8-orderstatus-scheduler.fullname" . }}"
+          image: "{{ .Values.quartzimage.repository }}:{{ .Values.quartzimage.tag | default .Chart.AppVersion }}"
+          env:
+            - name: 'TZ'
+              value: 'America/New_York'
+            - name: MSSQL_SA_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: "quartz-{{ include "bb8-orderstatus-scheduler.fullname" . }}"
+                  key: msSQLSAPassword
+            - name: MSSQL_QUARTZ_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: "quartz-{{ include "bb8-orderstatus-scheduler.fullname" . }}"
+                  key: msSQLQuartzPassword
+            - name: QUARTZ_DB_CREATION_SCRIPT
+              value: {{ .Values.quartzDBCreationScript }}
+          resources: {}
+          securityContext:
+            privileged: true
+      volumes:
+        - name: mssqldb
+          persistentVolumeClaim:
+            claimName: "pvc-quartz-{{ include "bb8-orderstatus-scheduler.fullname" . }}"
+      securityContext:
+        runAsUser: 0
+        runAsGroup: 0

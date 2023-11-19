@@ -1,0 +1,44 @@
+# https://aka.ms/yaml
+
+parameters:
+- name: accessToken
+  type: string
+  default: ''
+- name: buildId
+  type: string
+  default: ''
+- name: adoOrganization
+  type: string
+  default: ''
+- name: adoProjectName
+  type: string
+  default: ''
+- name: newResult
+  type: string
+  default: ''
+
+steps:
+
+- task: PowerShell@2
+  displayName: Change Build Result
+  inputs:
+    pwsh: true
+    targetType: inline
+    script: |
+      $secret = "${{parameters.accessToken}}"
+      $token = [System.Convert]::ToBase64String([System.Text.Encoding]::ASCII.GetBytes(":$($secret)"))
+      $header = @{authorization = "Basic $token"}
+
+      $buildId = ${{parameters.buildId}}
+      $azureDevOpsOrg = "${{parameters.adoOrganization}}"
+      $projectName = "${{parameters.adoProjectName}}"
+
+      $buildurl = "https://dev.azure.com/${azureDevOpsOrg}/${projectName}/_apis/build/builds/${buildId}?api-version=7.0"
+      $build = Invoke-RestMethod -Uri $buildurl -Method Get -ContentType "application/json" -Headers $header
+
+      if ($build.result -ne "succeeded")
+      {
+          $newResult = "${{parameters.newResult}}"
+          $buildUpdateBody = @{result="${newResult}"} | ConvertTo-Json -Compress
+          Invoke-RestMethod -Uri $buildurl -Method Patch -ContentType "application/json" -Headers $header -Body $buildUpdateBody
+      }

@@ -1,0 +1,61 @@
+# https://aka.ms/yaml
+
+parameters:
+- name: accessToken
+  type: string
+  default: ''
+- name: adoOrganization
+  type: string
+  default: ''
+- name: adoProjectName
+  type: string
+  default: ''
+- name: repository
+  type: string
+  default: ''
+- name: baseBranch
+  type: string
+  default: ''
+- name: newBranch
+  type: string
+  default: ''
+
+steps:
+
+- task: PowerShell@2
+  displayName: Create Branch
+  inputs:
+    pwsh: true
+    targetType: inline
+    script: |
+      $secret = "${{parameters.accessToken}}"
+      $token = [System.Convert]::ToBase64String([System.Text.Encoding]::ASCII.GetBytes(":$($secret)"))
+      $header = @{authorization = "Basic $token"}
+
+      $repository = "${{parameters.repository}}"
+      $newBranch = "${{parameters.newBranch}}"
+      $trimmedNewBranch = $newBranch.replace('refs/','')
+      $fullBaseBranch = "${{parameters.baseBranch}}"
+      $baseBranch = $fullBaseBranch.replace('refs/','')
+      $azureDevOpsOrg = "${{parameters.adoOrganization}}"
+      $projectName = "${{parameters.adoProjectName}}"
+
+      $url = "https://dev.azure.com/${azureDevOpsOrg}/${projectName}/_apis/git/repositories/$repository/refs?filter=$trimmedNewBranch&api-version=5.1"
+      $newBranchResponse = Invoke-RestMethod -Uri $url -ContentType "application/json" -headers $header -Method GET
+
+      if ($newBranchResponse.count -eq 0)
+      {
+        $url = "https://dev.azure.com/${azureDevOpsOrg}/${projectName}/_apis/git/repositories/$repository/refs?filter=$baseBranch&api-version=5.1"
+
+        $baseBranchResponse = Invoke-RestMethod -Uri $url -ContentType "application/json" -headers $header -Method GET
+
+        $url = "https://dev.azure.com/${azureDevOpsOrg}/${projectName}/_apis/git/repositories/$repository/refs?api-version=5.1"
+        $body = ConvertTo-Json @(
+        @{
+            name = $newBranch
+            newObjectId = $baseBranchResponse.value.objectId
+            oldObjectId = "0000000000000000000000000000000000000000"
+        })
+
+        Invoke-RestMethod -Uri $url -ContentType "application/json" -Body $body -headers $header -Method POST
+      }

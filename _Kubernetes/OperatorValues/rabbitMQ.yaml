@@ -1,0 +1,749 @@
+apiVersion: rabbitmq.com/v1beta1
+kind: RabbitmqCluster
+metadata:
+  name: aks-production-rabbitmq
+  namespace: production
+spec:
+  affinity:
+    nodeAffinity:
+      preferredDuringSchedulingIgnoredDuringExecution:
+        - preference:
+            matchExpressions:
+              - key: kubernetes.azure.com/mode
+                operator: In
+                values:
+                  - user
+          weight: 1
+  image: rabbitmq:3.11.13-management
+  override:
+    statefulSet:
+      spec:
+        template:
+          spec:
+            containers:
+            - name: rabbitmq
+              env:
+              - name: 'TZ'
+                value: 'America/New_York'
+              - name: 'LC_ALL'
+                value: 'en_US.UTF-8'
+              - name: 'LANG'
+                value: 'en_US.UTF-8'
+          metadata:
+            annotations:
+              prometheus.io/port: '9273'
+              prometheus.io/scrape: 'true'
+              telegraf.influxdata.com/class: sumologic-prometheus
+              telegraf.influxdata.com/inputs: |
+                [[inputs.rabbitmq]]
+                  url = "http://localhost:15672"
+                  username = "phoenix"
+                  password = "Zi99BH8TRk"
+                  insecure_skip_verify = true
+                  queue_name_include = []
+                  queue_name_exclude = []
+                  client_timeout = "40s"
+                  metric_exclude = ["federation"]
+                  [inputs.rabbitmq.tags]
+                    environment="production"
+                    component="messaging"
+                    messaging_system="rabbitmq"
+                    messaging_cluster="aks-production-rabbitmq"
+            labels:
+              app.kubernetes.io/component: rabbitmq
+              app.kubernetes.io/name: aks-production-rabbitmq
+              app.kubernetes.io/part-of: rabbitmq
+              component: messaging
+              environment: production
+              messaging_cluster: aks-production-rabbitmq
+              messaging_system: rabbitmq
+  persistence:
+    storage: 150Gi
+    storageClassName: managed-premium
+  replicas: 3
+  rabbitmq:
+    envConfig: |
+      RABBITMQ_LOGS=-
+    additionalConfig: |
+      log.console = true
+      log.console.level = info
+      log.file = false
+  service:
+    annotations:
+      service.beta.kubernetes.io/azure-load-balancer-internal: 'true'
+    type: LoadBalancer
+---
+apiVersion: rabbitmq.com/v1beta1
+kind: RabbitmqCluster
+metadata:
+  name: aks-stage-rabbitmq
+  namespace: stage
+spec:
+  affinity:
+    nodeAffinity:
+      preferredDuringSchedulingIgnoredDuringExecution:
+        - preference:
+            matchExpressions:
+              - key: kubernetes.azure.com/mode
+                operator: In
+                values:
+                  - user
+          weight: 1
+  image: rabbitmq:3.11.13-management
+  override:
+    statefulSet:
+      spec:
+        template:
+          spec:
+            containers:
+            - name: rabbitmq
+              env:
+              - name: 'TZ'
+                value: 'America/New_York'
+              - name: 'LC_ALL'
+                value: 'en_US.UTF-8'
+              - name: 'LANG'
+                value: 'en_US.UTF-8'
+          metadata:
+            annotations:
+              prometheus.io/port: '9273'
+              prometheus.io/scrape: 'true'
+              telegraf.influxdata.com/class: sumologic-prometheus
+              telegraf.influxdata.com/inputs: |
+                [[inputs.rabbitmq]]
+                  url = "http://localhost:15672"
+                  username = "phoenix"
+                  password = "pass"
+                  insecure_skip_verify = true
+                  queue_name_include = []
+                  queue_name_exclude = []
+                  client_timeout = "40s"
+                  metric_exclude = ["federation"]
+                  [inputs.rabbitmq.tags]
+                    environment="stage"
+                    component="messaging"
+                    messaging_system="rabbitmq"
+                    messaging_cluster="aks-stage-rabbitmq"
+            labels:
+              app.kubernetes.io/component: rabbitmq
+              app.kubernetes.io/name: aks-stage-rabbitmq
+              app.kubernetes.io/part-of: rabbitmq
+              component: messaging
+              environment: stage
+              messaging_cluster: aks-stage-rabbitmq
+              messaging_system: rabbitmq
+  persistence:
+    storage: 150Gi
+    storageClassName: managed-premium
+  replicas: 3
+  rabbitmq:
+    envConfig: |
+      RABBITMQ_LOGS=-
+    additionalConfig: |
+      log.console = true
+      log.console.level = info
+      log.file = false
+  service:
+    annotations:
+      service.beta.kubernetes.io/azure-load-balancer-internal: 'true'
+    type: LoadBalancer
+---
+apiVersion: rabbitmq.com/v1beta1
+kind: RabbitmqCluster
+metadata:
+  name: aks-cyber-rabbitmq
+  namespace: cyber
+spec:
+  affinity:
+    nodeAffinity:
+      preferredDuringSchedulingIgnoredDuringExecution:
+        - preference:
+            matchExpressions:
+              - key: kubernetes.azure.com/mode
+                operator: In
+                values:
+                  - user
+          weight: 1
+  image: rabbitmq:3.11.13-management
+  override:
+    statefulSet:
+      spec:
+        template:
+          spec:
+            containers:
+            - name: rabbitmq
+              env:
+              - name: 'TZ'
+                value: 'America/New_York'
+              - name: 'LC_ALL'
+                value: 'en_US.UTF-8'
+              - name: 'LANG'
+                value: 'en_US.UTF-8'
+          metadata:
+            annotations:
+              prometheus.io/port: '9273'
+              prometheus.io/scrape: 'true'
+              telegraf.influxdata.com/class: sumologic-prometheus
+              telegraf.influxdata.com/inputs: |
+                [[inputs.rabbitmq]]
+                  url = "http://localhost:15672"
+                  username = "phoenix"
+                  password = "pass"
+                  insecure_skip_verify = true
+                  queue_name_include = []
+                  queue_name_exclude = []
+                  client_timeout = "40s"
+                  metric_exclude = ["federation"]
+                  [inputs.rabbitmq.tags]
+                    environment="cyber"
+                    component="messaging"
+                    messaging_system="rabbitmq"
+                    messaging_cluster="aks-cyber-rabbitmq"
+            labels:
+              app.kubernetes.io/component: rabbitmq
+              app.kubernetes.io/name: aks-cyber-rabbitmq
+              app.kubernetes.io/part-of: rabbitmq
+              component: messaging
+              environment: cyber
+              messaging_cluster: aks-cyber-rabbitmq
+              messaging_system: rabbitmq
+  persistence:
+    storage: 150Gi
+    storageClassName: managed-premium
+  replicas: 3
+  rabbitmq:
+    envConfig: |
+      RABBITMQ_LOGS=-
+    additionalConfig: |
+      log.console = true
+      log.console.level = info
+      log.file = false
+  service:
+    annotations:
+      service.beta.kubernetes.io/azure-load-balancer-internal: 'true'
+    type: LoadBalancer
+---
+apiVersion: rabbitmq.com/v1beta1
+kind: RabbitmqCluster
+metadata:
+  name: aks-demo-rabbitmq
+  namespace: demo
+spec:
+  affinity:
+    nodeAffinity:
+      preferredDuringSchedulingIgnoredDuringExecution:
+        - preference:
+            matchExpressions:
+              - key: kubernetes.azure.com/mode
+                operator: In
+                values:
+                  - user
+          weight: 1
+  image: rabbitmq:3.11.13-management
+  override:
+    statefulSet:
+      spec:
+        template:
+          spec:
+            containers:
+            - name: rabbitmq
+              env:
+              - name: 'TZ'
+                value: 'America/New_York'
+              - name: 'LC_ALL'
+                value: 'en_US.UTF-8'
+              - name: 'LANG'
+                value: 'en_US.UTF-8'
+          metadata:
+            annotations:
+              prometheus.io/port: '9273'
+              prometheus.io/scrape: 'true'
+              telegraf.influxdata.com/class: sumologic-prometheus
+              telegraf.influxdata.com/inputs: |
+                [[inputs.rabbitmq]]
+                  url = "http://localhost:15672"
+                  username = "phoenix"
+                  password = "pass"
+                  insecure_skip_verify = true
+                  queue_name_include = []
+                  queue_name_exclude = []
+                  client_timeout = "40s"
+                  metric_exclude = ["federation"]
+                  [inputs.rabbitmq.tags]
+                    environment="demo"
+                    component="messaging"
+                    messaging_system="rabbitmq"
+                    messaging_cluster="aks-demo-rabbitmq"
+            labels:
+              app.kubernetes.io/component: rabbitmq
+              app.kubernetes.io/name: aks-demo-rabbitmq
+              app.kubernetes.io/part-of: rabbitmq
+              component: messaging
+              environment: demo
+              messaging_cluster: aks-demo-rabbitmq
+              messaging_system: rabbitmq
+  persistence:
+    storage: 150Gi
+    storageClassName: managed-premium
+  replicas: 3
+  rabbitmq:
+    envConfig: |
+      RABBITMQ_LOGS=-
+    additionalConfig: |
+      log.console = true
+      log.console.level = info
+      log.file = false
+  service:
+    annotations:
+      service.beta.kubernetes.io/azure-load-balancer-internal: 'true'
+    type: LoadBalancer
+---
+apiVersion: rabbitmq.com/v1beta1
+kind: RabbitmqCluster
+metadata:
+  name: aks-uat-rabbitmq
+  namespace: uat
+spec:
+  affinity:
+    nodeAffinity:
+      preferredDuringSchedulingIgnoredDuringExecution:
+        - preference:
+            matchExpressions:
+              - key: kubernetes.azure.com/mode
+                operator: In
+                values:
+                  - user
+          weight: 1
+  image: rabbitmq:3.11.13-management
+  override:
+    statefulSet:
+      spec:
+        template:
+          spec:
+            containers:
+            - name: rabbitmq
+              env:
+              - name: 'TZ'
+                value: 'America/New_York'
+              - name: 'LC_ALL'
+                value: 'en_US.UTF-8'
+              - name: 'LANG'
+                value: 'en_US.UTF-8'
+          metadata:
+            annotations:
+              prometheus.io/port: '9273'
+              prometheus.io/scrape: 'true'
+              telegraf.influxdata.com/class: sumologic-prometheus
+              telegraf.influxdata.com/inputs: |
+                [[inputs.rabbitmq]]
+                  url = "http://localhost:15672"
+                  username = "phoenix"
+                  password = "Zi99BH8TRk"
+                  insecure_skip_verify = true
+                  queue_name_include = []
+                  queue_name_exclude = []
+                  client_timeout = "40s"
+                  metric_exclude = ["federation"]
+                  [inputs.rabbitmq.tags]
+                    environment="uat"
+                    component="messaging"
+                    messaging_system="rabbitmq"
+                    messaging_cluster="aks-uat-rabbitmq"
+            labels:
+              app.kubernetes.io/component: rabbitmq
+              app.kubernetes.io/name: aks-uat-rabbitmq
+              app.kubernetes.io/part-of: rabbitmq
+              component: messaging
+              environment: uat
+              messaging_cluster: aks-uat-rabbitmq
+              messaging_system: rabbitmq
+  persistence:
+    storage: 150Gi
+    storageClassName: managed-premium
+  replicas: 3
+  rabbitmq:
+    envConfig: |
+      RABBITMQ_LOGS=-
+    additionalConfig: |
+      log.console = true
+      log.console.level = info
+      log.file = false
+  service:
+    annotations:
+      service.beta.kubernetes.io/azure-load-balancer-internal: 'true'
+    type: LoadBalancer
+---
+apiVersion: rabbitmq.com/v1beta1
+kind: RabbitmqCluster
+metadata:
+  name: aks-qa-rabbitmq
+  namespace: qa
+spec:
+  affinity:
+    nodeAffinity:
+      preferredDuringSchedulingIgnoredDuringExecution:
+        - preference:
+            matchExpressions:
+              - key: kubernetes.azure.com/mode
+                operator: In
+                values:
+                  - user
+          weight: 1
+  image: rabbitmq:3.11.13-management
+  override:
+    statefulSet:
+      spec:
+        template:
+          spec:
+            containers:
+            - name: rabbitmq
+              env:
+              - name: 'TZ'
+                value: 'America/New_York'
+              - name: 'LC_ALL'
+                value: 'en_US.UTF-8'
+              - name: 'LANG'
+                value: 'en_US.UTF-8'
+          metadata:
+            annotations:
+              prometheus.io/port: '9273'
+              prometheus.io/scrape: 'true'
+              telegraf.influxdata.com/class: sumologic-prometheus
+              telegraf.influxdata.com/inputs: |
+                [[inputs.rabbitmq]]
+                  url = "http://localhost:15672"
+                  username = "phoenix"
+                  password = "pass"
+                  insecure_skip_verify = true
+                  queue_name_include = []
+                  queue_name_exclude = []
+                  client_timeout = "40s"
+                  metric_exclude = ["federation"]
+                  [inputs.rabbitmq.tags]
+                    environment="qa"
+                    component="messaging"
+                    messaging_system="rabbitmq"
+                    messaging_cluster="aks-qa-rabbitmq"
+            labels:
+              app.kubernetes.io/component: rabbitmq
+              app.kubernetes.io/name: aks-qa-rabbitmq
+              app.kubernetes.io/part-of: rabbitmq
+              component: messaging
+              environment: qa
+              messaging_cluster: aks-qa-rabbitmq
+              messaging_system: rabbitmq
+  persistence:
+    storage: 150Gi
+    storageClassName: managed-premium
+  replicas: 3
+  rabbitmq:
+    envConfig: |
+      RABBITMQ_LOGS=-
+    additionalConfig: |
+      log.console = true
+      log.console.level = info
+      log.file = false
+  service:
+    annotations:
+      service.beta.kubernetes.io/azure-load-balancer-internal: 'true'
+    type: LoadBalancer
+---
+apiVersion: rabbitmq.com/v1beta1
+kind: RabbitmqCluster
+metadata:
+  name: aks-qa3-rabbitmq
+  namespace: qa3
+spec:
+  affinity:
+    nodeAffinity:
+      preferredDuringSchedulingIgnoredDuringExecution:
+        - preference:
+            matchExpressions:
+              - key: kubernetes.azure.com/mode
+                operator: In
+                values:
+                  - user
+          weight: 1
+  image: rabbitmq:3.11.13-management
+  override:
+    statefulSet:
+      spec:
+        template:
+          spec:
+            containers:
+            - name: rabbitmq
+              env:
+              - name: 'TZ'
+                value: 'America/New_York'
+              - name: 'LC_ALL'
+                value: 'en_US.UTF-8'
+              - name: 'LANG'
+                value: 'en_US.UTF-8'
+          metadata:
+            annotations:
+              prometheus.io/port: '9273'
+              prometheus.io/scrape: 'true'
+              telegraf.influxdata.com/class: sumologic-prometheus
+              telegraf.influxdata.com/inputs: |
+                [[inputs.rabbitmq]]
+                  url = "http://localhost:15672"
+                  username = "phoenix"
+                  password = "phoenix"
+                  insecure_skip_verify = true
+                  queue_name_include = []
+                  queue_name_exclude = []
+                  client_timeout = "40s"
+                  metric_exclude = ["federation"]
+                  [inputs.rabbitmq.tags]
+                    environment="qa3"
+                    component="messaging"
+                    messaging_system="rabbitmq"
+                    messaging_cluster="aks-qa3-rabbitmq"
+            labels:
+              app.kubernetes.io/component: rabbitmq
+              app.kubernetes.io/name: aks-qa3-rabbitmq
+              app.kubernetes.io/part-of: rabbitmq
+              component: messaging
+              environment: qa3
+              messaging_cluster: aks-qa3-rabbitmq
+              messaging_system: rabbitmq
+  persistence:
+    storage: 150Gi
+    storageClassName: managed-premium
+  replicas: 3
+  rabbitmq:
+    envConfig: |
+      RABBITMQ_LOGS=-
+    additionalConfig: |
+      log.console = true
+      log.console.level = info
+      log.file = false
+  service:
+    annotations:
+      service.beta.kubernetes.io/azure-load-balancer-internal: 'true'
+    type: LoadBalancer
+---
+apiVersion: rabbitmq.com/v1beta1
+kind: RabbitmqCluster
+metadata:
+  name: aks-qa2-rabbitmq
+  namespace: qa2
+spec:
+  affinity:
+    nodeAffinity:
+      preferredDuringSchedulingIgnoredDuringExecution:
+        - preference:
+            matchExpressions:
+              - key: kubernetes.azure.com/mode
+                operator: In
+                values:
+                  - user
+          weight: 1
+  image: rabbitmq:3.11.13-management
+  override:
+    statefulSet:
+      spec:
+        template:
+          spec:
+            containers:
+            - name: rabbitmq
+              env:
+              - name: 'TZ'
+                value: 'America/New_York'
+              - name: 'LC_ALL'
+                value: 'en_US.UTF-8'
+              - name: 'LANG'
+                value: 'en_US.UTF-8'
+          metadata:
+            annotations:
+              prometheus.io/port: '9273'
+              prometheus.io/scrape: 'true'
+              telegraf.influxdata.com/class: sumologic-prometheus
+              telegraf.influxdata.com/inputs: |
+                [[inputs.rabbitmq]]
+                  url = "http://localhost:15672"
+                  username = "phoenix"
+                  password = "pass"
+                  insecure_skip_verify = true
+                  queue_name_include = []
+                  queue_name_exclude = []
+                  client_timeout = "40s"
+                  metric_exclude = ["federation"]
+                  [inputs.rabbitmq.tags]
+                    environment="qa2"
+                    component="messaging"
+                    messaging_system="rabbitmq"
+                    messaging_cluster="aks-qa2-rabbitmq"
+            labels:
+              app.kubernetes.io/component: rabbitmq
+              app.kubernetes.io/name: aks-qa2-rabbitmq
+              app.kubernetes.io/part-of: rabbitmq
+              component: messaging
+              environment: qa2
+              messaging_cluster: aks-qa2-rabbitmq
+              messaging_system: rabbitmq
+  persistence:
+    storage: 150Gi
+    storageClassName: managed-premium
+  replicas: 3
+  rabbitmq:
+    envConfig: |
+      RABBITMQ_LOGS=-
+    additionalConfig: |
+      log.console = true
+      log.console.level = info
+      log.file = false
+  service:
+    annotations:
+      service.beta.kubernetes.io/azure-load-balancer-internal: 'true'
+    type: LoadBalancer
+---
+apiVersion: rabbitmq.com/v1beta1
+kind: RabbitmqCluster
+metadata:
+  name: aks-qa1-rabbitmq
+  namespace: qa1
+spec:
+  affinity:
+    nodeAffinity:
+      preferredDuringSchedulingIgnoredDuringExecution:
+        - preference:
+            matchExpressions:
+              - key: kubernetes.azure.com/mode
+                operator: In
+                values:
+                  - user
+          weight: 1
+  image: rabbitmq:3.11.13-management
+  override:
+    statefulSet:
+      spec:
+        template:
+          spec:
+            containers:
+            - name: rabbitmq
+              env:
+              - name: 'TZ'
+                value: 'America/New_York'
+              - name: 'LC_ALL'
+                value: 'en_US.UTF-8'
+              - name: 'LANG'
+                value: 'en_US.UTF-8'
+          metadata:
+            annotations:
+              prometheus.io/port: '9273'
+              prometheus.io/scrape: 'true'
+              telegraf.influxdata.com/class: sumologic-prometheus
+              telegraf.influxdata.com/inputs: |
+                [[inputs.rabbitmq]]
+                  url = "http://localhost:15672"
+                  username = "phoenix"
+                  password = "pass"
+                  insecure_skip_verify = true
+                  queue_name_include = []
+                  queue_name_exclude = []
+                  client_timeout = "40s"
+                  metric_exclude = ["federation"]
+                  [inputs.rabbitmq.tags]
+                    environment="qa1"
+                    component="messaging"
+                    messaging_system="rabbitmq"
+                    messaging_cluster="aks-qa1-rabbitmq"
+            labels:
+              app.kubernetes.io/component: rabbitmq
+              app.kubernetes.io/name: aks-qa1-rabbitmq
+              app.kubernetes.io/part-of: rabbitmq
+              component: messaging
+              environment: qa1
+              messaging_cluster: aks-qa1-rabbitmq
+              messaging_system: rabbitmq
+  persistence:
+    storage: 150Gi
+    storageClassName: managed-premium
+  replicas: 3
+  rabbitmq:
+    envConfig: |
+      RABBITMQ_LOGS=-
+    additionalConfig: |
+      log.console = true
+      log.console.level = info
+      log.file = false
+  service:
+    annotations:
+      service.beta.kubernetes.io/azure-load-balancer-internal: 'true'
+    type: LoadBalancer
+---
+apiVersion: rabbitmq.com/v1beta1
+kind: RabbitmqCluster
+metadata:
+  name: aks-development-rabbitmq
+  namespace: development
+spec:
+  affinity:
+    nodeAffinity:
+      preferredDuringSchedulingIgnoredDuringExecution:
+        - preference:
+            matchExpressions:
+              - key: kubernetes.azure.com/mode
+                operator: In
+                values:
+                  - user
+          weight: 1
+  image: rabbitmq:3.11.13-management
+  override:
+    statefulSet:
+      spec:
+        template:
+          spec:
+            containers:
+            - name: rabbitmq
+              env:
+              - name: 'TZ'
+                value: 'America/New_York'
+              - name: 'LC_ALL'
+                value: 'en_US.UTF-8'
+              - name: 'LANG'
+                value: 'en_US.UTF-8'
+          metadata:
+            annotations:
+              prometheus.io/port: '9273'
+              prometheus.io/scrape: 'true'
+              telegraf.influxdata.com/class: sumologic-prometheus
+              telegraf.influxdata.com/inputs: |
+                [[inputs.rabbitmq]]
+                  url = "http://localhost:15672"
+                  username = "OBFUSCATED"
+                  password = "OBFUSCATED"
+                  insecure_skip_verify = true
+                  queue_name_include = []
+                  queue_name_exclude = []
+                  client_timeout = "40s"
+                  metric_exclude = ["federation"]
+                  [inputs.rabbitmq.tags]
+                    environment="development"
+                    component="messaging"
+                    messaging_system="rabbitmq"
+                    messaging_cluster="aks-development-rabbitmq"
+            labels:
+              app.kubernetes.io/component: rabbitmq
+              app.kubernetes.io/name: aks-development-rabbitmq
+              app.kubernetes.io/part-of: rabbitmq
+              component: messaging
+              environment: development
+              messaging_cluster: aks-development-rabbitmq
+              messaging_system: rabbitmq
+  persistence:
+    storage: 150Gi
+    storageClassName: managed-premium
+  replicas: 3
+  rabbitmq:
+    envConfig: |
+      RABBITMQ_LOGS=-
+    additionalConfig: |
+      log.console = true
+      log.console.level = info
+      log.file = false
+  service:
+    annotations:
+      service.beta.kubernetes.io/azure-load-balancer-internal: 'true'
+    type: LoadBalancer

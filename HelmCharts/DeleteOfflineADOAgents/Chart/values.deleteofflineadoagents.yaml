@@ -1,0 +1,11 @@
+#nameOverride: ""
+#fullnameOverride: ""
+
+adopat: ~adopat~
+schedule: 0 * * * *
+adoOrg: PresidioDev
+
+image:
+  repository: presidiocontainers.azurecr.io/delete-offline-ado-agents
+  pullPolicy: Always
+  tag: "~buildId~"

@@ -1,0 +1,130 @@
+resources:
+  repositories:
+  - repository: Pipelines
+    type: git
+    name: Pipelines
+    trigger:
+      branches:
+        include:
+        - main
+      paths:
+        include:
+        - HelmCharts/QAAgents
+
+variables:
+- group: ServiceConnections
+- group: Snyk
+- group: AKSDeployments
+- group: QAAgents
+- group: Calico
+- name: buildNumberPrefix
+  value: QA.Agents
+- name: snkyOrganizationId
+  value: $(Snyk.OrgIdDevOps)
+- name: kubernetesCluster
+  value: $(AKSDeployments.BuildAgentsCluster)
+- name: containerRegistryName
+  value: presidiocontainers
+
+parameters:
+
+- name: dockerimages
+  type: object
+  default:
+
+  - repository: qa-agents
+    displayName: 'QA Agents'
+    buildContext: 'HelmCharts/QAAgents/DockerImages/Agents/buildcontext'
+    dockerfile: 'HelmCharts/QAAgents/DockerImages/Agents/Dockerfile'
+    failOnIssues: false
+
+- name: environments
+  type: object
+  default:
+
+  - displayName: 'QA Agents'
+    namespace: qa-agents
+    valuesFile: HelmCharts/QAAgents/Chart/values.qaagents.yaml
+    releaseName: qa-agents
+    chartPath: 'HelmCharts/QAAgents/Chart'
+    helmArgs: "--create-namespace"
+
+stages:
+- stage: SetBuildNumber
+  displayName: Set Build Number
+  jobs:
+  - job:
+    displayName: Set Build Number
+    pool:
+      vmImage: ubuntu-latest
+    steps:
+    - task: PowerShell@2
+      displayName: Set Build Number
+      inputs:
+        pwsh: true
+        targetType: inline
+        script: Write-Host "##vso[build.updatebuildnumber]$(buildNumberPrefix)-$(Build.BuildNumber)"
+
+- stage: BuildDockerImages
+  displayName: Build Docker Images
+  jobs:
+  - ${{ each dockerimage in parameters.dockerimages }}:
+    - job:
+      displayName: Build ${{ dockerimage.displayName }} Docker Image
+      pool:
+        vmImage: ubuntu-latest
+      steps:
+      - template: HelmCharts/_Templates/dockerApplications.yml@Pipelines
+        parameters:
+          repository: ${{ dockerimage.repository }}
+          buildContext: ${{ dockerimage.buildContext }}
+          dockerFile: ${{ dockerimage.dockerFile }}
+          failOnIssues: ${{ dockerimage.failOnIssues }}
+          containerRegistry: $(ServiceConnections.ContainerRegistry)
+          snykConnection: $(ServiceConnections.SnykAuthentication)
+          snkyOrganizationId: $(snkyOrganizationId)
+          buildId: $(Build.BuildId)
+          registryName: $(Snyk.RegistryName)
+          artifactStagingDirectory: $(Build.ArtifactStagingDirectory)
+          calicoApi: $(Calico.API)
+          calicoToken: $(Calico.Token)
+          azureSubscription: $(ServiceConnections.AzureResourceManager)
+          containerRegistryName: $(containerRegistryName)
+
+- stage: RunHelmCharts
+  displayName: Run Helm Charts
+  jobs:
+  - ${{ each env in parameters.environments }}:
+    - job:
+      displayName: Run ${{ env.displayName }} Helm Chart
+      pool:
+        vmImage: ubuntu-latest
+      steps:
+        - task: PowerShell@2
+          displayName: Replace Tokens for Values YAML
+          inputs:
+            targetType: inline
+            pwsh: true
+            script: |
+              ((Get-Content -path ${{ env.valuesFile }} -Raw) -replace '~adopat~','$(QAAgents.PAT)') | Set-Content -Path ${{ env.valuesFile }}
+              ((Get-Content -path ${{ env.valuesFile }} -Raw) -replace '~buildId~','$(Build.BuildId)') | Set-Content -Path ${{ env.valuesFile }}
+              Get-Content -path ${{ env.valuesFile }}
+
+        - task: HelmDeploy@0
+          displayName: Run Helm Chart
+          inputs:
+            connectionType: 'Azure Resource Manager'
+            azureSubscriptionEndpoint: $(ServiceConnections.AzureResourceManager)
+            azureResourceGroup: $(AKSDeployments.AKSResourceGroup)
+            kubernetesCluster: $(kubernetesCluster)
+            azureSubscriptionForACR: $(ServiceConnections.AzureResourceManager)
+            azureResourceGroupForACR: $(AKSDeployments.AKSResourceGroup)
+            azureContainerRegistry: $(ServiceConnections.ContainerRegistry)
+            namespace: ${{ env.namespace }}
+            chartPath: ${{ env.chartPath }}
+            valueFile: ${{ env.valuesFile }}
+            releaseName: ${{ env.releaseName }}
+            command: 'upgrade'
+            waitForExecution: true
+            chartType: 'FilePath'
+            arguments: ${{ env.helmArgs }}

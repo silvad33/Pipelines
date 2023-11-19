@@ -1,0 +1,34 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "sumologic-remote-collector.fullname" . }}
+  labels:
+    app.kubernetes.io/name: {{ include "sumologic-remote-collector.fullname" . }}
+spec:
+  replicas: {{ .Values.replicaCount }}
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: {{ include "sumologic-remote-collector.fullname" . }}
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: {{ include "sumologic-remote-collector.fullname" . }}
+    spec:
+      {{- with .Values.affinity }}
+      affinity:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      containers:
+      - name: {{ include "sumologic-remote-collector.fullname" . }}
+        image: "{{ .Values.image.repository }}:{{ .Values.image.tag | default .Chart.AppVersion }}"
+        command: ["cmd", "/c", "poststart.bat"]
+        env:
+        - name: COLLECTOR_NAME
+          value: {{ .Values.collectorName }}
+        - name: SUMO_LOGIC_INSTALLER_TOKEN
+          valueFrom:
+            secretKeyRef:
+              name: {{ include "sumologic-remote-collector.fullname" . }}
+              key: installtoken
+        resources:
+          {{- toYaml .Values.resources | nindent 12 }}

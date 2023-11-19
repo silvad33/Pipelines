@@ -1,0 +1,115 @@
+# https://aka.ms/yaml
+
+variables:
+- group: ServiceConnections
+- group: AKSDeployments
+- group: SumoLogicRemoteCollector
+- name: buildNumberPrefix
+  value: Sumo.Logic.Remote.Collector
+- name: chartPath
+  value: 'HelmCharts/SumoLogicRemoteCollector/Chart'
+
+parameters:
+
+- name: dockerimages
+  type: object
+  default:
+
+  - repository: sumologic-remote-collector
+    displayName: 'Sumo Logic Remote Collectors'
+    buildContext: 'HelmCharts/SumoLogicRemoteCollector/DockerImages/SumoLogicRemoteCollector/buildcontext'
+    dockerfile: 'HelmCharts/SumoLogicRemoteCollector/DockerImages/SumoLogicRemoteCollector/Dockerfile'
+    failOnIssues: false
+
+- name: environments
+  type: object
+  default:
+
+  - displayName: 'Sumo Logic Remote Collectors'
+    namespace: sumo-collectors
+    valuesFile: HelmCharts/SumoLogicRemoteCollector/Chart/values.sumo-collectors.yaml
+    releaseName: sumologic-remote-collector
+
+resources:
+  repositories:
+  - repository: Pipelines
+    type: git
+    name: Pipelines
+    trigger:
+      branches:
+        include:
+        - main
+      paths:
+        include:
+        - HelmCharts/SumoLogicRemoteCollector
+
+stages:
+- stage: SetBuildNumber
+  displayName: Set Build Number
+  jobs:
+  - job:
+    displayName: Set Build Number
+    pool:
+      vmImage: ubuntu-latest
+    steps:
+    - task: PowerShell@2
+      displayName: Set Build Number
+      inputs:
+        pwsh: true
+        targetType: inline
+        script: Write-Host "##vso[build.updatebuildnumber]$(buildNumberPrefix)-$(Build.BuildNumber)"
+
+- stage: BuildDockerImages
+  displayName: Build Docker Images
+  jobs:
+  - ${{ each dockerimage in parameters.dockerimages }}:
+    - job:
+      displayName: Build ${{ dockerimage.displayName }} Docker Image
+      pool:
+        vmImage: windows-latest
+      steps:
+      - template: HelmCharts/_Templates/dockerApplicationsWindows.yml@Pipelines
+        parameters:
+          repository: ${{ dockerimage.repository }}
+          buildContext: ${{ dockerimage.buildContext }}
+          dockerFile: ${{ dockerimage.dockerFile }}
+          containerRegistry: $(ServiceConnections.ContainerRegistry)
+          buildId: $(Build.BuildId)
+
+- stage: RunHelmCharts
+  displayName: Run Helm Charts
+  jobs:
+  - ${{ each env in parameters.environments }}:
+    - job:
+      displayName: Run ${{ env.displayName }} Helm Chart
+      pool:
+        vmImage: windows-latest
+      steps:
+        - task: PowerShell@2
+          displayName: Replace Tokens for Values YAML
+          inputs:
+            targetType: inline
+            pwsh: true
+            script: |
+              ((Get-Content -path ${{ env.valuesFile }} -Raw) -replace '~buildId~','$(Build.BuildId)') | Set-Content -Path ${{ env.valuesFile }}
+              ((Get-Content -path ${{ env.valuesFile }} -Raw) -replace '~sumoLogicInstallToken~','$(SumoLogicRemoteCollector.SumoLogicInstallerToken)') | Set-Content -Path ${{ env.valuesFile }}
+              Get-Content -path ${{ env.valuesFile }}
+
+        - task: HelmDeploy@0
+          displayName: Run Helm Chart
+          inputs:
+            connectionType: 'Azure Resource Manager'
+            azureSubscriptionEndpoint: $(ServiceConnections.AzureResourceManager)
+            azureResourceGroup: $(AKSDeployments.AKSResourceGroup)
+            kubernetesCluster: $(AKSDeployments.BuildAgentsWinCluster)
+            azureSubscriptionForACR: $(ServiceConnections.AzureResourceManager)
+            azureResourceGroupForACR: $(AKSDeployments.AKSResourceGroup)
+            azureContainerRegistry: $(ServiceConnections.ContainerRegistry)
+            namespace: ${{ env.namespace }}
+            chartPath: $(chartPath)
+            valueFile: ${{ env.valuesFile }}
+            releaseName: ${{ env.releaseName }}
+            command: 'upgrade'
+            waitForExecution: true
+            chartType: 'FilePath'
+            arguments: "--create-namespace --timeout 5m0s"

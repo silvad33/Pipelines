@@ -1,0 +1,37 @@
+#nameOverride: ""
+#fullnameOverride: ""
+
+sumologic:
+  installtoken: ~sumoLogicInstallToken~
+
+replicaCount: 1
+
+collectorName: sumologic-remote-collector
+
+image:
+  repository: presidiocontainers.azurecr.io/sumologic-remote-collector
+  pullPolicy: Always
+  tag: "~buildId~"
+
+resources: {}
+  # limits:
+  #   cpu: 100m
+  #   memory: 128Mi
+  # requests:
+  #   cpu: 100m
+  #   memory: 128Mi
+
+affinity:
+  nodeAffinity:
+    preferredDuringSchedulingIgnoredDuringExecution:
+    - weight: 1
+      preference:
+        matchExpressions:
+        - key: kubernetes.azure.com/mode
+          operator: In
+          values:
+          - user
+        - key: kubernetes.io/os
+          operator: In
+          values:
+          - windows

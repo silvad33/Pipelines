@@ -1,0 +1,28 @@
+apiVersion: batch/v1
+kind: CronJob
+metadata:
+  name: {{ include "delete-offline-ado-agents.fullname" . }}
+spec:
+  schedule: {{ .Values.schedule }}
+  jobTemplate:
+    spec:
+      template:
+        spec:
+          containers:
+          - name: {{ include "delete-offline-ado-agents.fullname" . }}
+            image: "{{ .Values.image.repository }}:{{ .Values.image.tag | default .Chart.AppVersion }}"
+            command:
+            - /bin/sh
+            - '-c'
+            - pwsh ./poststart.ps1
+            env:
+            - name: ADO_ORG
+              value: {{ .Values.adoOrg }}
+            - name: ADO_PAT
+              valueFrom:
+                secretKeyRef:
+                  name: {{ include "delete-offline-ado-agents.fullname" . }}
+                  key: adopat
+          restartPolicy: OnFailure
+  successfulJobsHistoryLimit: 3
+  failedJobsHistoryLimit: 1

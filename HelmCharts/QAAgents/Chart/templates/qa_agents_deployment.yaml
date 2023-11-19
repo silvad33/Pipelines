@@ -1,0 +1,43 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "qa-agents.fullname" . }}
+  labels:
+    app.kubernetes.io/name: {{ include "qa-agents.fullname" . }}
+spec:
+  replicas: {{ .Values.replicaCount }}
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: {{ include "qa-agents.fullname" . }}
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: {{ include "qa-agents.fullname" . }}
+    spec:
+      {{- with .Values.affinity }}
+      affinity:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.hostAliases }}
+      hostAliases:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      containers:
+      - name: {{ include "qa-agents.fullname" . }}
+        image: "{{ .Values.image.repository }}:{{ .Values.image.tag | default .Chart.AppVersion }}"
+        env:
+        - name: ADO_ORG_URL
+          value: {{ .Values.adoOrgUrl }}
+        - name: AGENT_POOL
+          value: {{ .Values.agentPool }}
+        - name: ADO_PAT
+          valueFrom:
+            secretKeyRef:
+              name: {{ include "qa-agents.fullname" . }}
+              key: adopat
+        lifecycle:
+          preStop:
+            exec:
+              command: ["/bin/sh", "-c", "/prestop.sh"]
+        resources:
+          {{- toYaml .Values.resources | nindent 12 }}

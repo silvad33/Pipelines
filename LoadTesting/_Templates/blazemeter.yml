@@ -1,0 +1,68 @@
+parameters:
+- name: jmxFile
+  type: string
+  default: ''
+- name: apiKeyId
+  type: string
+  default: ''
+- name: apiKeySecret
+  type: string
+  default: ''
+- name: blazeMeterTestId
+  type: string
+  default: ''
+- name: workingDirectory
+  type: string
+  default: ''
+- name: udv_authpayload
+  type: string
+  default: ''
+- name: udv_host
+  type: string
+  default: ''
+- name: configFile
+  type: string
+  default: ''
+
+steps:
+
+- task: CmdLine@2
+  displayName: Upload BlazeMeter Test
+  inputs:
+    workingDirectory: ${{parameters.workingDirectory}}
+    script: |
+      curl 'https://a.blazemeter.com/api/v4/tests/${{parameters.blazeMeterTestId}}/files' \
+        -X POST \
+        -F 'file=@${{parameters.jmxFile}}' \
+        --user '${{parameters.apiKeyId}}:${{parameters.apiKeySecret}}'
+
+- task: PowerShell@2
+  displayName: Replace Tokens for BlazeMeter Configuration
+  inputs:
+    targetType: inline
+    pwsh: true
+    script: |
+      ((Get-Content -path  ${{parameters.configFile}} -Raw) -replace '~udv_authpayload~','${{parameters.udv_authpayload}}') | Set-Content -Path ${{parameters.configFile}}
+      ((Get-Content -path ${{parameters.configFile}} -Raw) -replace '~udv_host~','${{parameters.udv_host}}') | Set-Content -Path ${{parameters.configFile}}
+      Get-Content -path ${{parameters.configFile}}
+
+- task: CmdLine@2
+  displayName: Update BlazeMeter Test Configuration
+  inputs:
+    workingDirectory: ${{parameters.workingDirectory}}
+    script: |
+      curl 'https://a.blazemeter.com/api/v4/tests/${{parameters.blazeMeterTestId}}' \
+        -X PUT \
+        -H 'Content-Type: application/json' \
+        -d @${{parameters.configFile}} \
+        --user '${{parameters.apiKeyId}}:${{parameters.apiKeySecret}}'
+
+- task: CmdLine@2
+  displayName: Start BlazeMeter Test
+  inputs:
+    workingDirectory: ${{parameters.workingDirectory}}
+    script: |
+      curl 'https://a.blazemeter.com/api/v4/tests/${{parameters.blazeMeterTestId}}/start' \
+        -X POST \
+        -H 'Content-Type: application/json' \
+        --user '${{parameters.apiKeyId}}:${{parameters.apiKeySecret}}'

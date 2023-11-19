@@ -1,0 +1,117 @@
+variables:
+- group: Snyk
+- group: ServiceConnections
+- name: pomFile
+  value: selenium-vision-project/pom.xml
+- name: buildNumberPrefix
+  value: BB8.MyPresidio.Automation.API.Suite
+- name: projectKey
+  value: BB8_BB8.UIAutomationTests_AYZR1W3Imxn4zL3aqOjd
+- name: sonarQubeConnection
+  value: $(ServiceConnections.SonarQubeBB8.Subscription.UITests)
+- name: breakSonarQubefailure
+  value: false
+- name: snkyOrganizationId
+  value: $(Snyk.OrgIdTesting)
+
+
+resources:
+  repositories:
+  - repository: BB8.UIAutomationTests
+    type: git
+    name: BB8.UIAutomationTests
+    ref: master
+    trigger: none
+  - repository: Pipelines
+    type: git
+    name: Pipelines
+    trigger: none
+
+stages:
+- stage: SetBuildNumber
+  displayName: Set Build Number
+  jobs:
+  - job:
+    displayName: Set Build Number
+    pool:
+      vmImage: ubuntu-latest
+    steps:
+    - task: PowerShell@2
+      displayName: Set Build Number
+      inputs:
+        pwsh: true
+        targetType: inline
+        script: Write-Host "##vso[build.updatebuildnumber]$(buildNumberPrefix)-$(Build.BuildNumber)"
+- stage: CodeAnalysis
+  displayName: Code Analysis
+  jobs:
+  - job:
+    displayName: Run Snyk Scan
+    pool:
+      vmImage: ubuntu-latest
+    steps:
+    - checkout: BB8.UIAutomationTests
+    - template: SnykScanners/_Templates/snykJava.yml@Pipelines
+      parameters:
+        snykConnection: $(ServiceConnections.SnykAuthentication)
+        snkyOrganizationId: $(snkyOrganizationId)
+        pomFile: $(pomFile)
+
+  - ${{ if ne(variables['Build.Reason'], 'PullRequest') }}:
+    - job:
+      displayName: Run SonarQube Analysis
+      pool:
+        vmImage: ubuntu-latest
+      steps:
+      - checkout: BB8.UIAutomationTests
+      - template: SonarQubeScanners/_Templates/sonarQubeJava.yml@Pipelines
+        parameters:
+          sonarQubeConnection: $(sonarQubeConnection)
+          projectKey: $(projectKey)
+          breakSonarQubefailure: '${{ variables.breakSonarQubefailure }}'
+          pomFile: $(pomFile)
+  - ${{ else }}:
+    - job:
+      displayName: Run SonarQube Analysis
+      pool:
+        vmImage: ubuntu-latest
+      steps:
+      - checkout: BB8.UIAutomationTests
+      - template: SonarQubeScanners/_Templates/sonarQubeJava.yml@Pipelines
+        parameters:
+          sonarQubeConnection: $(sonarQubeConnection)
+          projectKey: $(projectKey)
+          breakSonarQubefailure: '${{ variables.breakSonarQubefailure }}'
+          pomFile: $(pomFile)
+          prId: $(System.PullRequest.PullRequestId)
+          prSourceBranch: $(System.PullRequest.SourceBranch)
+          prTargetBranch: $(System.PullRequest.TargetBranch)
+
+- ${{ if ne(variables['Build.Reason'], 'PullRequest') }}:
+  - stage: RunSeleniumUITests
+    displayName: Run Selenium UI Tests
+    jobs:
+    - job:
+      displayName: Run Selenium UI Tests
+      timeoutInMinutes: 360
+      pool:
+        name: QA Agents
+      steps:
+      - checkout: BB8.UIAutomationTests
+
+      - task: Maven@3
+        displayName: Maven $(pomFile)
+        continueOnError: true
+        inputs:
+          mavenPomFile: $(pomFile)
+          goals: 'surefire-report:report'
+
+      - task: PublishCucumberReport@1
+        displayName: Publish Cucumber Report
+        inputs:
+          jsonDir: '$(Build.SourcesDirectory)/selenium-vision-project/target/json-report/'
+          outputPath: '$(Build.SourcesDirectory)/selenium-vision-project/target/cucumber-report'
+          theme: 'bootstrap'
+          reportSuiteAsScenarios: true
+          name: 'Cucumber-HTML-report'
+          title: 'MyPresidio Automation Test Report'

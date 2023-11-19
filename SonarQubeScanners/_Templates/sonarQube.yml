@@ -1,0 +1,106 @@
+parameters:
+- name: sonarQubeConnection
+  type: string
+  default: ''
+- name: projectKey
+  type: string
+  default: ''
+- name: solution
+  type: string
+  default: ''
+- name: buildConfiguration
+  type: string
+  default: ''
+- name: vstsFeed
+  type: string
+  default: ''
+- name: dotNetVersion
+  type: string
+  default: "7.0.x"
+- name: testDll
+  type: string
+  default: ''
+- name: breakSonarQubefailure
+  type: string
+  default: 'false'
+- name: prId
+  type: string
+  default: ''
+- name: prSourceBranch
+  type: string
+  default: ''
+- name: prTargetBranch
+  type: string
+  default: ''
+- name: userProfile
+  type: string
+  default: ''
+- name: justMockVersion
+  type: string
+  default: ''
+
+steps:
+
+- ${{ if eq(parameters.prId, '') }}:
+  - task: SonarQubePrepare@5
+    displayName: Prepare Analysis on SonarQube
+    inputs:
+      scannerMode: MSBuild
+      SonarQube: ${{parameters.sonarQubeConnection}}
+      projectKey: ${{parameters.projectKey}}
+      extraProperties: |
+        sonar.qualitygate.wait=${{parameters.breakSonarQubefailure}}
+- ${{ else }}:
+  - task: SonarQubePrepare@5
+    displayName: Prepare Analysis on SonarQube
+    inputs:
+      scannerMode: MSBuild
+      SonarQube: ${{parameters.sonarQubeConnection}}
+      projectKey: ${{parameters.projectKey}}
+      extraProperties: |
+        sonar.pullrequest.key=${{parameters.prId}}
+        sonar.pullrequest.branch=${{parameters.prSourceBranch}}
+        sonar.pullrequest.base=${{parameters.prTargetBranch}}
+        sonar.qualitygate.wait=${{parameters.breakSonarQubefailure}}
+
+- task: UseDotNet@2
+  displayName: Install .NET Core SDK
+  inputs:
+    version: ${{parameters.dotNetVersion}}
+    performMultiLevelLookup: true
+
+- task: DotNetCoreCLI@2
+  displayName: Restore Solution
+  inputs:
+    command: restore
+    projects: ${{parameters.solution}}
+    vstsFeed: ${{parameters.vstsFeed}}
+
+- task: VSBuild@1
+  displayName: Build Solution
+  inputs:
+    configuration: ${{parameters.buildConfiguration}}
+    solution: ${{parameters.solution}}
+
+- ${{ if ne(parameters.justMockVersion, '') }}:
+  - task: vs-publisher-443.jm-vstest-2.JustMockVSTest-2.JustMockVSTest@2
+    displayName: Run Automated Tests
+    inputs:
+      testAssemblyVer2: ${{parameters.testDll}}
+      codeCoverageEnabled: True
+      diagnosticsEnabled: True
+      pathTo64BitJustMockProfiler: '${{parameters.userProfile}}\.nuget\packages\justmock.commercial\${{parameters.justMockVersion}}\runtimes\win-x64\native\Telerik.CodeWeaver.Profiler.dll'
+      pathTo32BitJustMockProfiler: '${{parameters.userProfile}}\.nuget\packages\justmock.commercial\${{parameters.justMockVersion}}\runtimes\win-x32\native\Telerik.CodeWeaver.Profiler.dll'
+- ${{ if and(ne(parameters.testDll, ''), eq(parameters.justMockVersion, '')) }}:
+  - task: VSTest@2
+    displayName: Run Automated Tests
+    inputs:
+      testAssemblyVer2: ${{parameters.testDll}}
+      codeCoverageEnabled: True
+      diagnosticsEnabled: True
+
+- task: SonarQubeAnalyze@5
+  displayName: Run Code Analysis
+
+- task: SonarQubePublish@5
+  displayName: Publish Quality Gate Result

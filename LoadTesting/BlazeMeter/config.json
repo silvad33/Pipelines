@@ -1,0 +1,122 @@
+{
+	"configuration": {
+		"plugins": {
+			"remoteControl": [
+				{
+					"key": "udv_authpayload",
+					"value": "~udv_authpayload~"
+				},
+				{
+					"key": "udv_host",
+					"value": "~udv_host~"
+				}
+			],
+			"hosts": [
+				{
+					"ip": "10.10.10.170",
+					"hostname": "sva-mo-db01"
+				},
+				{
+					"ip": "10.10.12.112",
+					"hostname": "sva-phxt-qa02"
+				},
+				{
+					"ip": "10.10.15.40",
+					"hostname": "phoenix-qa1.presidio.com"
+				},
+				{
+					"ip": "10.10.15.41",
+					"hostname": "myorders-qa1.presidio.com"
+				},
+				{
+					"ip": "10.10.15.38",
+					"hostname": "phoenix-api-qa1.presidio.com"
+				},
+				{
+					"ip": "10.10.15.42",
+					"hostname": "phoenix-api-qa2.presidio.com"
+				},
+				{
+					"ip": "10.10.15.59",
+					"hostname": "phoenix-api-qa3.presidio.com"
+				},
+				{
+					"ip": "10.10.15.44",
+					"hostname": "phoenix-qa2.presidio.com"
+				},
+				{
+					"ip": "10.10.15.45",
+					"hostname": "myorders-qa2.presidio.com"
+				},
+				{
+					"ip": "10.10.15.56",
+					"hostname": "myorders-qa3.presidio.com"
+				},
+				{
+					"ip": "10.10.15.58",
+					"hostname": "phoenix-qa3.presidio.com"
+				},
+				{
+					"ip": "10.252.19.45",
+					"hostname": "aspx-forms-service.presidio.com"
+				},
+				{
+					"ip": "10.252.19.45",
+					"hostname": "qa-user-service.presidio-internal.net"
+				},
+				{
+					"ip": "172.21.1.112",
+					"hostname": "myorders.presidio.com"
+				},
+				{
+					"ip": "172.21.1.120",
+					"hostname": "myorders-uat.presidio.com"
+				},
+				{
+					"ip": "172.21.1.127",
+					"hostname": "myorders-api-uat.presidio.com"
+				},
+				{
+					"ip": "172.21.1.131",
+					"hostname": "myorders-test.presidio.com"
+				},
+				{
+					"ip": "172.21.1.209",
+					"hostname": "phoenix-uat.presidio.com"
+				},
+				{
+					"ip": "172.21.1.117",
+					"hostname": "mypresidio.presidio.com"
+				},
+				{
+					"ip": "172.21.1.139",
+					"hostname": "mypresidio-qa.presidio.com"
+				},
+				{
+					"ip": "10.10.15.57",
+					"hostname": "mypresidio-qa3.presidio.com"
+				},
+				{
+					"ip": "172.21.1.108",
+					"hostname": "mypresidio-uat.presidio.com"
+				},
+				{
+					"ip": "172.21.1.104",
+					"hostname": "phoenix-api-uat.presidio.com"
+				},
+				{
+					"ip": "172.21.1.184",
+					"hostname": "phoenix-qa.presidio.com"
+				},
+				{
+					"ip": "172.21.1.133",
+					"hostname": "api-beta.presidio.com"
+				},
+				{
+					"ip": "10.252.21.100",
+					"hostname": "reportportal.presidio-internal.net"
+				}
+			]
+		}
+	}
+}

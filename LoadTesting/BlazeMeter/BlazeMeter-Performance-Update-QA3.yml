@@ -1,0 +1,75 @@
+variables:
+- group: BlazeMeter
+- group: JMeter
+- name: workingDirectory
+  value: $(Build.SourcesDirectory)/MyOrdersUITests/BB8.UIMyordersAutomationTest/jmeter
+- name: configFile
+  value: $(Build.SourcesDirectory)/Pipelines/LoadTesting/BlazeMeter/config.json
+- name: buildNumberPrefix
+  value: BlazeMeter.MyOrders.Update.QA3
+- name: blazeMeterTestId
+  value: '13357198'
+- name: jmxFile
+  value: MyOrdersPerformanceTestUpdate.jmx
+- name: udv_authpayload
+  value: $(JMeter.QA3_Payload)
+- name: udv_host
+  value: myorders-qa3.presidio.com
+
+resources:
+  repositories:
+  - repository: MyOrdersUITests
+    type: git
+    name: MyOrdersUITests
+    ref: myordersautomation
+    trigger:
+      branches:
+        include:
+        - myordersautomation
+  - repository: Pipelines
+    type: git
+    name: Pipelines
+    trigger:
+      branches:
+        include:
+        - main
+      paths:
+        include:
+        - LoadTesting/BlazeMeter/BlazeMeter-Performance-Update-QA3.yml
+
+stages:
+- stage: SetBuildNumber
+  displayName: Set Build Number
+  jobs:
+  - job:
+    displayName: Set Build Number
+    pool:
+      vmImage: ubuntu-latest
+    steps:
+    - task: PowerShell@2
+      displayName: Set Build Number
+      inputs:
+        pwsh: true
+        targetType: inline
+        script: Write-Host "##vso[build.updatebuildnumber]$(buildNumberPrefix)-$(Build.BuildNumber)"
+
+- stage: RunBlazeMeterPerformanceTests
+  displayName: Run BlazeMeter Performance Tests
+  jobs:
+  - job:
+    displayName: Run BlazeMeter Performance Tests
+    pool:
+      vmImage: ubuntu-latest
+    steps:
+    - checkout: MyOrdersUITests
+    - checkout: Pipelines
+    - template: LoadTesting\_Templates\blazemeter.yml@Pipelines
+      parameters:
+        jmxFile: $(jmxFile)
+        apiKeyId: $(BlazeMeter.ApiKeyId)
+        apiKeySecret: $(BlazeMeter.ApiKeySecret)
+        blazeMeterTestId: $(blazeMeterTestId)
+        workingDirectory: $(workingDirectory)
+        udv_authpayload: $(udv_authpayload)
+        udv_host: $(udv_host)
+        configFile: $(configFile)

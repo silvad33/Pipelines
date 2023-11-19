@@ -1,0 +1,74 @@
+resources:
+  repositories:
+  - repository: R2D2
+    type: git
+    name: R2D2
+  - repository: Pipelines
+    type: git
+    name: Pipelines
+    trigger:
+      branches:
+        include:
+        - main
+      paths:
+        include:
+        - SonarQubeScanners/MyOrdersLegacySonarQubeScanner.yml
+
+variables:
+- group: ServiceConnections
+- group: Artifacts
+- name: solution
+  value: MyOrdersUniverse.sln
+- name: buildConfiguration
+  value: FullSolutionRebuild
+- name: buildPlatform
+  value: any cpu
+- name: projectKey
+  value: BB8_R2D2_AYPrlY3_fd5HUEML_5vl
+- name: buildNumberPrefix
+  value: MyOrders.Legacy.SonarQube.Scanner
+- name: sonarQubeConnection
+  value: $(ServiceConnections.SonarQubeR2D2)
+- name: breakSonarQubefailure
+  value: false
+
+schedules:
+- cron: "0 15 * * 1,2,3,4,5"
+  always: true
+  branches:
+    include:
+    - main
+
+stages:
+- stage: SetBuildNumber
+  displayName: Set Build Number
+  jobs:
+  - job:
+    displayName: Set Build Number
+    pool:
+      vmImage: ubuntu-latest
+    steps:
+    - task: PowerShell@2
+      displayName: Set Build Number
+      inputs:
+        pwsh: true
+        targetType: inline
+        script: Write-Host "##vso[build.updatebuildnumber]$(buildNumberPrefix)-$(Build.BuildNumber)"
+- stage: SonarQube
+  displayName: Run SonarQube Analysis
+  jobs:
+  - job:
+    displayName: Run SonarQube Analysis
+    pool:
+      vmImage: windows-latest
+    steps:
+    - checkout: R2D2
+    - template: SonarQubeScanners/_Templates/sonarQubeFramework.yml@Pipelines
+      parameters:
+        sonarQubeConnection: $(sonarQubeConnection)
+        solution: $(solution)
+        buildConfiguration: $(buildConfiguration)
+        projectKey: $(projectKey)
+        vstsFeed: $(Artifacts.FeedId)
+        breakSonarQubefailure: '${{ variables.breakSonarQubefailure }}'
+        buildPlatform: $(buildPlatform)

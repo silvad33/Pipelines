@@ -1,0 +1,150 @@
+variables:
+- group: Snyk
+- group: ServiceConnections
+- name: pomFile
+  value: UI/pom_new.xml
+- name: buildNumberPrefix
+  value: BB8.Subscription.Suite.2
+- name: projectKey
+  value: BB8_BB8.Subscription.UITests_AYZ1PRGfmxn4zL3aqOrX
+# - name: sonarQubeConnection
+#   value: $(ServiceConnections.SonarQubeBB8.Subscription.UITests)
+# - name: breakSonarQubefailure
+#   value: false
+# - name: snkyOrganizationId
+#   value: $(Snyk.OrgIdTesting)
+
+resources:
+  repositories:
+  - repository: BB8.Subscription.UITests
+    type: git
+    name: BB8.Subscription.UITests
+    ref: work/ckarate/subscription_search_engine_fixes_95666
+    trigger: none
+  - repository: Pipelines
+    type: git
+    name: Pipelines
+    trigger: none
+
+stages:
+- stage: SetBuildNumber
+  displayName: Set Build Number
+  jobs:
+  - job:
+    displayName: Set Build Number
+    pool:
+      vmImage: ubuntu-latest
+    steps:
+    - task: PowerShell@2
+      displayName: Set Build Number
+      inputs:
+        pwsh: true
+        targetType: inline
+        script: Write-Host "##vso[build.updatebuildnumber]$(buildNumberPrefix)-$(Build.BuildNumber)"
+- stage: CodeAnalysis
+  displayName: Code Analysis
+  jobs:
+  # - job:
+  #   displayName: Run Snyk Scan
+  #   pool:
+  #     vmImage: ubuntu-latest
+  #   steps:
+  #   - checkout: BB8.Subscription.UITests
+  #   - template: SnykScanners/_Templates/snykJava.yml@Pipelines
+  #     parameters:
+  #       snykConnection: $(ServiceConnections.SnykAuthentication)
+  #       snkyOrganizationId: $(snkyOrganizationId)
+  #       pomFile: $(pomFile)
+
+  # - ${{ if ne(variables['Build.Reason'], 'PullRequest') }}:
+  #   - job:
+  #     displayName: Run SonarQube Analysis
+  #     pool:
+  #       vmImage: ubuntu-latest
+  #     steps:
+  #     - checkout: BB8.Subscription.UITests
+  #     - template: SonarQubeScanners/_Templates/sonarQubeJava.yml@Pipelines
+  #       parameters:
+  #         sonarQubeConnection: $(sonarQubeConnection)
+  #         projectKey: $(projectKey)
+  #         breakSonarQubefailure: '${{ variables.breakSonarQubefailure }}'
+  #         pomFile: $(pomFile)
+  # - ${{ else }}:
+    - job:
+      displayName: Run SonarQube Analysis
+      pool:
+        vmImage: ubuntu-latest
+      steps:
+      - checkout: BB8.Subscription.UITests
+      # - template: SonarQubeScanners/_Templates/sonarQubeJava.yml@Pipelines
+        # parameters:
+        #   sonarQubeConnection: $(sonarQubeConnection)
+        #   projectKey: $(projectKey)
+        #   breakSonarQubefailure: '${{ variables.breakSonarQubefailure }}'
+        #   pomFile: $(pomFile)
+        #   prId: $(System.PullRequest.PullRequestId)
+        #   prSourceBranch: $(System.PullRequest.SourceBranch)
+        #   prTargetBranch: $(System.PullRequest.TargetBranch)
+
+- ${{ if ne(variables['Build.Reason'], 'PullRequest') }}:
+  - stage: RunSeleniumUITests
+    displayName: Run Selenium UI Tests
+    jobs:
+    - job:
+      displayName: Run Selenium UI Tests
+      timeoutInMinutes: 360
+      pool:
+        name: QA Agents
+      steps:
+      - checkout: BB8.Subscription.UITests
+      
+      - task: NodeTool@0
+        displayName: Install Node.js
+        inputs:
+          versionSpec: 10.x
+
+      - task: Maven@3
+        displayName: Maven $(pomFile)
+        continueOnError: true
+        inputs:
+          mavenPomFile: $(pomFile)
+          goals: 'clean install test -Pregression-tests -Denvironment=UAT  -Dbrowser=chrome -X -Drp.enable=true'
+          options: 'surefire-report:report-only -X'
+          # publishJUnitResults: true
+          # publishTestResults: true
+
+      # - task: PublishBuildArtifacts@1
+      #   displayName: Publish Outfile Files to ADO
+      
+      # - task: AzureStaticWebApp@0
+      #   inputs:
+      #     app_location: './'
+      #     output_location: 'cucumber-reports'
+      #     azure_static_web_apps_api_token: '86a992877426a23492e60029933accfde9790906d2c2a4bc2c9e0045f9b2847f4-127b42a8-5111-409f-88f3-3c408f2f2db700f121897'
+
+      - task: PublishCucumberReport@1
+        displayName: Publish Cucumber Report
+        inputs:
+          jsonDir: '$(Build.SourcesDirectory)/UI/target/cucumber-reports/'
+          outputPath: '$(Build.SourcesDirectory)/UI/target/cucumber-reports/'
+          theme: 'bootstrap'
+          reportSuiteAsScenarios: true
+          name: 'Cucumber-HTML-report'
+          title: 'Subscription Automation Test Report'
+          
+      # - task: PublishTestResults@2
+      #   inputs:
+      #     testResultsFormat: 'JUnit'
+      #     testResultsFiles: '**/TEST-*.xml'
+      #     mergeTestResults: true
+      #     failTaskOnFailedTests: true
+      #     failTaskOnMissingResultsFile: true
+      #     testRunTitle: 'Subscription Complete Test'
+        
+      # - task: PublishTestResults@2  
+      #   inputs:    
+      #     testResultsFormat: 'JUnit' 
+      #     searchFolder: '$(System.DefaultWorkingDirectory)'    
+      #     # publishJUnitResults: true    
+      #     testResultsFiles: '**/surefire-reports/TEST-*.xml'
+      #     publishTestResults: true

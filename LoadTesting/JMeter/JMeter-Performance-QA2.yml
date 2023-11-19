@@ -1,0 +1,87 @@
+variables:
+- group: JMeter
+- group: ReportPortal
+- name: host
+  value: myorders-qa2.presidio.com
+- name: jmeterVersion
+  value: '5.4.2'
+- name: buildNumberPrefix
+  value: JMeter.Performance.QA2
+- name: workingDirectory
+  value: $(Build.SourcesDirectory)/BB8.UIMyordersAutomationTest/jmeter
+- name: jmeterReportsPath
+  value: $(Build.SourcesDirectory)/BB8.UIMyordersAutomationTest/jmeter/reports01
+- name: jmeterJTLFile
+  value: $(Build.SourcesDirectory)/BB8.UIMyordersAutomationTest/jmeter/reports01/results01.jtl
+- name: jmeterScript
+  value: 'jmeter -n -t MyOrdersPerformanceTest.jmx -Judv_authpayload=$(JMeter.QA2_Payload) -Jhost=$(host) -l $(jmeterJTLFile) -e -o $(jmeterReportsPath) -f -L jmeter.util=INFO'
+- name: reportPortalEndpoint
+  value: 'http://reportportal.presidio-internal.net/api/v1'
+- name: reportPortalProject
+  value: test_project
+- name: launchName
+  value: myorders_qa2
+- name: launchDescription
+  value: 'MyOrders QA2'
+- name: statisticsFile
+  value: $(Build.SourcesDirectory)/BB8.UIMyordersAutomationTest/jmeter/reports01/statistics.json
+
+resources:
+  repositories:
+  - repository: MyOrdersUITests
+    type: git
+    name: MyOrdersUITests
+    ref: myordersautomation
+    trigger:
+      branches:
+        include:
+        - myordersautomation
+  - repository: Pipelines
+    type: git
+    name: Pipelines
+    trigger:
+      branches:
+        include:
+        - main
+      paths:
+        include:
+        - LoadTesting/JMeter/JMeter-Performance-QA2.yml
+
+stages:
+- stage: SetBuildNumber
+  displayName: Set Build Number
+  jobs:
+  - job:
+    displayName: Set Build Number
+    pool:
+      vmImage: ubuntu-latest
+    steps:
+    - task: PowerShell@2
+      displayName: Set Build Number
+      inputs:
+        pwsh: true
+        targetType: inline
+        script: Write-Host "##vso[build.updatebuildnumber]$(buildNumberPrefix)-$(Build.BuildNumber)"
+- stage: RunJMeterPerformanceTests
+  displayName: Run JMeter Performance Tests
+  jobs:
+  - job:
+    displayName: Run JMeter Performance Tests
+    timeoutInMinutes: 360
+    pool:
+      name: QA Agents
+    steps:
+    - checkout: MyOrdersUITests
+    - template: LoadTesting\_Templates\jmeter.yml@Pipelines
+      parameters:
+        jmeterVersion: $(jmeterVersion)
+        jmeterScript: $(jmeterScript)
+        workingDirectory: $(workingDirectory)
+        jmeterReportsPath: $(jmeterReportsPath)
+        jmeterJTLFile: $(jmeterJTLFile)
+        reportPortalEndpoint: $(reportPortalEndpoint)
+        reportPortalProject: $(reportPortalProject)
+        reportPortalToken: $(ReportPortal.Token)
+        launchName: $(launchName)
+        launchDescription: $(launchDescription)
+        statisticsFile: $(statisticsFile)

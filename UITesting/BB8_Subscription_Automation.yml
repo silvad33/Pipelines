@@ -1,0 +1,133 @@
+variables:
+- group: Snyk
+- group: ServiceConnections
+- name: pomFile
+  value: UI/pom_new.xml
+- name: buildNumberPrefix
+  value: BB8.Subscription.Regression.Suite1
+- name: projectKey
+  value: BB8_BB8.Subscription.UITests_AYZ1PRGfmxn4zL3aqOrX
+# - name: sonarQubeConnection
+#   value: $(ServiceConnections.SonarQubeBB8.Subscription.UITests)
+# - name: breakSonarQubefailure
+#   value: false
+# - name: snkyOrganizationId
+#   value: $(Snyk.OrgIdTesting)
+
+schedules:
+- cron: "0 0 * * 1,2,3,4,5" # 7 PM EST = Midnight UTC
+  always: true
+  branches:
+    include:
+    - main
+
+resources:
+  repositories:
+  - repository: BB8.Subscription.UITests
+    type: git
+    name: BB8.Subscription.UITests
+    ref: work/ckarate/subscription_regression_suite
+    trigger:
+      branches:
+        include:
+        - work/ckarate/subscription_regression_suite
+  - repository: Pipelines
+    type: git
+    name: Pipelines
+    trigger:
+      branches:
+        include:
+        - main
+      paths:
+        include:
+        - UITesting/BB8_Subscription_Automation.yml
+
+stages:
+- stage: SetBuildNumber
+  displayName: Set Build Number
+  jobs:
+  - job:
+    displayName: Set Build Number
+    pool:
+      vmImage: ubuntu-latest
+    steps:
+    - task: PowerShell@2
+      displayName: Set Build Number
+      inputs:
+        pwsh: true
+        targetType: inline
+        script: Write-Host "##vso[build.updatebuildnumber]$(buildNumberPrefix)-$(Build.BuildNumber)"
+- stage: CodeAnalysis
+  displayName: Code Analysis
+  jobs:
+  # - job:
+  #   displayName: Run Snyk Scan
+  #   pool:
+  #     vmImage: ubuntu-latest
+  #   steps:
+  #   - checkout: BB8.Subscription.UITests
+  #   - template: SnykScanners/_Templates/snykJava.yml@Pipelines
+  #     parameters:
+  #       snykConnection: $(ServiceConnections.SnykAuthentication)
+  #       snkyOrganizationId: $(snkyOrganizationId)
+  #       pomFile: $(pomFile)
+
+  # - ${{ if ne(variables['Build.Reason'], 'PullRequest') }}:
+  #   - job:
+  #     displayName: Run SonarQube Analysis
+  #     pool:
+  #       vmImage: ubuntu-latest
+  #     steps:
+  #     - checkout: BB8.Subscription.UITests
+  #     - template: SonarQubeScanners/_Templates/sonarQubeJava.yml@Pipelines
+  #       parameters:
+  #         sonarQubeConnection: $(sonarQubeConnection)
+  #         projectKey: $(projectKey)
+  #         breakSonarQubefailure: '${{ variables.breakSonarQubefailure }}'
+  #         pomFile: $(pomFile)
+  # - ${{ else }}:
+    - job:
+      displayName: Run SonarQube Analysis
+      pool:
+        vmImage: ubuntu-latest
+      steps:
+      - checkout: BB8.Subscription.UITests
+      # - template: SonarQubeScanners/_Templates/sonarQubeJava.yml@Pipelines
+      #   parameters:
+      #     sonarQubeConnection: $(sonarQubeConnection)
+      #     projectKey: $(projectKey)
+      #     breakSonarQubefailure: '${{ variables.breakSonarQubefailure }}'
+      #     pomFile: $(pomFile)
+      #     prId: $(System.PullRequest.PullRequestId)
+      #     prSourceBranch: $(System.PullRequest.SourceBranch)
+      #     prTargetBranch: $(System.PullRequest.TargetBranch)
+
+- ${{ if ne(variables['Build.Reason'], 'PullRequest') }}:
+  - stage: RunSeleniumUITests
+    displayName: Run Selenium UI Tests
+    jobs:
+    - job:
+      displayName: Run Selenium UI Tests
+      timeoutInMinutes: 360
+      pool:
+        name: QA Agents
+      steps:
+      - checkout: BB8.Subscription.UITests
+
+      - task: Maven@3
+        displayName: Maven $(pomFile)
+        continueOnError: true
+        inputs:
+          mavenPomFile: $(pomFile)
+          goals: 'clean test -Drp.enable=true -Pregression-tests'
+          options: 'surefire-report:report-only -X'
+
+      - task: PublishCucumberReport@1
+        displayName: Publish Cucumber Report
+        inputs:
+          jsonDir: '$(Build.SourcesDirectory)/UI/target/cucumber-reports/'
+          outputPath: '$(Build.SourcesDirectory)/UI/target/cucumber-reports/'
+          theme: 'bootstrap'
+          reportSuiteAsScenarios: true
+          name: 'Cucumber-HTML-report'
+          title: 'Subscription Automation Regression Test Report'

@@ -1,0 +1,95 @@
+resources:
+  repositories:
+  - repository: BB8
+    type: git
+    name: BB8
+  - repository: Pipelines
+    type: git
+    name: Pipelines
+    trigger:
+      branches:
+        include:
+        - main
+      paths:
+        include:
+        - SnykScanners/BB8LegacySnykScanner.yml
+
+variables:
+- group: ServiceConnections
+- group: Artifacts
+- group: Snyk
+- name: solution
+  value: BB8.sln
+- name: buildConfiguration
+  value: Debug
+- name: buildNumberPrefix
+  value: BB8.Legacy.Snyk.Scanner
+- name: snkyOrganizationId
+  value: $(Snyk.OrgIdMyPresidio)
+
+schedules:
+- cron: "0 17 * * 1,2,3,4,5"
+  always: true
+  branches:
+    include:
+    - main
+
+stages:
+- stage: SetBuildNumber
+  displayName: Set Build Number
+  jobs:
+  - job:
+    displayName: Set Build Number
+    pool:
+      vmImage: ubuntu-latest
+    steps:
+    - task: PowerShell@2
+      displayName: Set Build Number
+      inputs:
+        pwsh: true
+        targetType: inline
+        script: Write-Host "##vso[build.updatebuildnumber]$(buildNumberPrefix)-$(Build.BuildNumber)"
+
+- stage: Snyk
+  displayName: Run Snyk Scan
+  jobs:
+  - job:
+    displayName: Run Snyk Scan
+    pool:
+      vmImage: windows-latest
+    steps:
+    - checkout: BB8
+
+    - task: VSBuild@1
+      displayName: Build SQL
+      inputs:
+        solution: '**/*.sqlproj'
+        msbuildArgs: -verbosity:minimal
+
+    - task: DotNetCoreCLI@2
+      displayName: Restore myPresidio
+      inputs:
+        command: restore
+        projects: '**/*.csproj'
+        vstsFeed: $(Artifacts.FeedId)
+
+    - task: DotNetCoreCLI@2
+      displayName: Build myPresidio
+      inputs:
+        projects: |
+          **/*.csproj
+          !**/*UnitTests.csproj
+          !**/BB8.Core.BuildUtilities.csproj
+          !**/BB8.Core.BuildValidationTool.csproj
+        arguments: '--configuration $(buildConfiguration) '
+
+    - task: Snyk.snyk-security-scan.custom-build-release-task.SnykSecurityScan@1
+      displayName: Run Snyk Scan
+      inputs:
+        serviceConnectionEndpoint: $(ServiceConnections.SnykAuthentication)
+        testType: app
+        severityThreshold: low
+        monitorWhen: never
+        failOnIssues: false
+        additionalArguments: --all-projects
+        organization: $(snkyOrganizationId)

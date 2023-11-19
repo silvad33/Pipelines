@@ -1,0 +1,72 @@
+variables:
+- group: ServiceConnections
+- name: pomFile
+  value: BB8.UIMyordersAutomationTest/selenium/pom.xml
+- name: buildNumberPrefix
+  value: MyOrders.SalesOrder.Automation.Test.CI
+
+parameters:
+- name: myorders.siteUrl
+  type: string
+  default: uat
+
+resources:
+  repositories:
+  - repository: MyOrdersUITests
+    type: git
+    name: MyOrdersUITests
+    ref: work/ckrishnaprasad/manageCustomerPortal7
+    trigger: none
+  - repository: Pipelines
+    type: git
+    name: Pipelines
+    trigger: none
+
+stages:
+- stage: SetBuildNumber
+  displayName: Set Build Number
+  jobs:
+  - job:
+    displayName: Set Build Number
+    pool:
+      vmImage: ubuntu-latest
+    steps:
+    - task: PowerShell@2
+      displayName: Set Build Number
+      inputs:
+        pwsh: true
+        targetType: inline
+        script: Write-Host "##vso[build.updatebuildnumber]$(buildNumberPrefix)-$(Build.BuildNumber)"
+
+- ${{ if ne(variables['Build.Reason'], 'PullRequest') }}:
+  - stage: RunSeleniumUITests
+    displayName: Run Selenium UI Tests
+    jobs:
+    - job:
+      displayName: Run Selenium UI Tests
+      pool:
+        name: QA Agents
+      steps:
+      - checkout: MyOrdersUITests
+
+      - task: NodeTool@0
+        displayName: Install Node.js
+        inputs:
+          versionSpec: 10.x
+
+      - task: Maven@3
+        displayName: Maven $(pomFile)
+        continueOnError: true
+        inputs:
+          mavenPomFile: $(pomFile)
+          options: 'clean install test -P featureTest -Dbrowser=chrome -X'
+
+      - task: PublishCucumberReport@1
+        displayName: Publish Cucumber Report
+        inputs:
+          jsonDir: '$(Build.SourcesDirectory)/BB8.UIMyordersAutomationTest/selenium/target/cucumber'
+          outputPath: '$(Build.SourcesDirectory)/BB8.UIMyordersAutomationTest/selenium/target/cucumber'
+          theme: 'bootstrap'
+          reportSuiteAsScenarios: true
+          name: 'Cucumber report'
+          title: 'cucumber report'

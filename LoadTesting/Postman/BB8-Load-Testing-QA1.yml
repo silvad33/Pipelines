@@ -1,0 +1,73 @@
+variables:
+- group: Postman
+- name: buildNumberPrefix
+  value: BB8.Load.Testing.QA1
+- name: collectionIds
+  value: 24485288-ceed279d-eead-4c12-99e3-c04b0846d22c
+- name: environmentId
+  value: 17573915-d44ae196-c884-4000-a6cf-e781e93b1102
+- name: apiAuthUrl
+  value: https://phoenix-api-qa1.presidio.com/v1.0/authentication/token
+- name: apiAuthRequestBody
+  value: $(Postman.AuthRequestBody_QA1)
+- name: virtualUsers
+  value: '50'
+- name: jsPath
+  value: LoadTesting/Postman
+- name: jsFile
+  value: parallel-collection-runs.js
+
+schedules:
+- cron: "0 17 * * 1,2,3,4,5"
+  always: true
+  branches:
+    include:
+    - main
+
+resources:
+  repositories:
+  - repository: Pipelines
+    type: git
+    name: Pipelines
+    trigger:
+      branches:
+        include:
+        - main
+      paths:
+        include:
+        - LoadTesting/Postman/BB8-Load-Testing-QA1.yml
+
+stages:
+- stage: SetBuildNumber
+  displayName: Set Build Number
+  jobs:
+  - job:
+    displayName: Set Build Number
+    pool:
+      vmImage: ubuntu-latest
+    steps:
+    - task: PowerShell@2
+      displayName: Set Build Number
+      inputs:
+        pwsh: true
+        targetType: inline
+        script: Write-Host "##vso[build.updatebuildnumber]$(buildNumberPrefix)-$(Build.BuildNumber)"
+- stage: RunPostman
+  displayName: Run Postman Tests
+  jobs:
+  - job:
+    displayName: Run Newman
+    pool:
+      name: QA Agents
+    steps:
+    - template: LoadTesting/_Templates/newman.yml@Pipelines
+      parameters:
+        postmanAPIKey: $(Postman.APIKey)
+        apiAuthRequestBody: $(apiAuthRequestBody)
+        apiAuthUrl: $(apiAuthUrl)
+        collectionIds: $(collectionIds)
+        environmentId: $(environmentId)
+        virtualUsers: $(virtualUsers)
+        jsPath: $(jsPath)
+        jsFile: $(jsFile)
+        artifactStagingDirectory: $(Build.ArtifactStagingDirectory)

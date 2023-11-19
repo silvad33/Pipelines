@@ -1,0 +1,66 @@
+variables:
+- group: Postman
+- name: buildNumberPrefix
+  value: BB8.Load.Testing.QA
+- name: apiAuthUrl
+  value: https://phoenix-api-qa.presidio.com/v1.0/authentication/token
+- name: apiAuthRequestBody
+  value: $(Postman.AuthRequestBody_QA)
+- name: virtualUsers
+  value: '100'
+- name: jsPath
+  value: LoadTesting/Postman
+- name: jsFile
+  value: parallel-collection-runs-manual.js
+- name: collectionFile
+  value: Config/Collections/TestAPIPerformance-QA.postman_collection.json
+- name: environmentFile
+  value: Config/Environment/QA.postman_environment.json
+
+resources:
+  repositories:
+  - repository: Pipelines
+    type: git
+    name: Pipelines
+    trigger:
+      branches:
+        include:
+        - main
+      paths:
+        include:
+        - LoadTesting/Postman/BB8-Load-Testing-QA.yml
+
+stages:
+- stage: SetBuildNumber
+  displayName: Set Build Number
+  jobs:
+  - job:
+    displayName: Set Build Number
+    pool:
+      vmImage: ubuntu-latest
+    steps:
+    - task: PowerShell@2
+      displayName: Set Build Number
+      inputs:
+        pwsh: true
+        targetType: inline
+        script: Write-Host "##vso[build.updatebuildnumber]$(buildNumberPrefix)-$(Build.BuildNumber)"
+- stage: RunPostman
+  displayName: Run Postman Tests
+  jobs:
+  - job:
+    displayName: Run Newman
+    pool:
+      name: QA Agents
+    steps:
+    - template: LoadTesting/_Templates/newman-manual.yml@Pipelines
+      parameters:
+        postmanAPIKey: $(Postman.APIKey)
+        apiAuthRequestBody: $(apiAuthRequestBody)
+        apiAuthUrl: $(apiAuthUrl)
+        virtualUsers: $(virtualUsers)
+        jsPath: $(jsPath)
+        jsFile: $(jsFile)
+        artifactStagingDirectory: $(Build.ArtifactStagingDirectory)
+        collectionFile: $(collectionFile)
+        environmentFile: $(environmentFile)

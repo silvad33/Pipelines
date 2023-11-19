@@ -1,0 +1,67 @@
+resources:
+  repositories:
+  - repository: R2D2
+    type: git
+    name: R2D2
+  - repository: Pipelines
+    type: git
+    name: Pipelines
+    trigger:
+      branches:
+        include:
+        - main
+      paths:
+        include:
+        - SnykScanners/MyOrdersLegacySnykScanner.yml
+
+variables:
+- group: ServiceConnections
+- group: Artifacts
+- group: Snyk
+- name: solution
+  value: MyOrdersUniverse.sln
+- name: buildConfiguration
+  value: FullSolutionRebuild
+- name: buildNumberPrefix
+  value: MyOrders.Legacy.Snyk.Scanner
+- name: snkyOrganizationId
+  value: $(Snyk.OrgIdMyOrders)
+
+schedules:
+- cron: "0 15 * * 1,2,3,4,5"
+  always: true
+  branches:
+    include:
+    - main
+
+stages:
+- stage: SetBuildNumber
+  displayName: Set Build Number
+  jobs:
+  - job:
+    displayName: Set Build Number
+    pool:
+      vmImage: ubuntu-latest
+    steps:
+    - task: PowerShell@2
+      displayName: Set Build Number
+      inputs:
+        pwsh: true
+        targetType: inline
+        script: Write-Host "##vso[build.updatebuildnumber]$(buildNumberPrefix)-$(Build.BuildNumber)"
+- stage: Snyk
+  displayName: Run Snyk Scan
+  jobs:
+  - job:
+    displayName: Run Snyk Scan
+    pool:
+      vmImage: windows-latest
+    steps:
+    - checkout: R2D2
+    - template: SnykScanners/_Templates/snykFramework.yml@Pipelines
+      parameters:
+        snykConnection: $(ServiceConnections.SnykAuthentication)
+        solution: $(solution)
+        buildConfiguration: $(buildConfiguration)
+        vstsFeed: $(Artifacts.FeedId)
+        snkyOrganizationId: $(snkyOrganizationId)

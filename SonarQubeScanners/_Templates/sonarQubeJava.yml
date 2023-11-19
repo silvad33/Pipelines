@@ -1,0 +1,57 @@
+parameters:
+- name: sonarQubeConnection
+  type: string
+  default: ''
+- name: projectKey
+  type: string
+  default: ''
+- name: pomFile
+  type: string
+  default: ''
+- name: breakSonarQubefailure
+  type: string
+  default: 'false'
+- name: prId
+  type: string
+  default: ''
+- name: prSourceBranch
+  type: string
+  default: ''
+- name: prTargetBranch
+  type: string
+  default: ''
+
+steps:
+
+- ${{ if eq(parameters.prId, '') }}:
+  - task: SonarQubePrepare@5
+    displayName: Prepare Analysis on SonarQube
+    inputs:
+      scannerMode: Other
+      SonarQube: ${{parameters.sonarQubeConnection}}
+      extraProperties: |
+        sonar.projectKey=${{parameters.projectKey}}
+        sonar.qualitygate.wait=${{parameters.breakSonarQubefailure}}
+- ${{ else }}:
+  - task: SonarQubePrepare@5
+    displayName: Prepare Analysis on SonarQube
+    inputs:
+      scannerMode: Other
+      SonarQube: ${{parameters.sonarQubeConnection}}
+      extraProperties: |
+        sonar.projectKey=${{parameters.projectKey}}
+        sonar.pullrequest.key=${{parameters.prId}}
+        sonar.pullrequest.branch=${{parameters.prSourceBranch}}
+        sonar.pullrequest.base=${{parameters.prTargetBranch}}
+        sonar.qualitygate.wait=${{parameters.breakSonarQubefailure}}
+
+- task: Maven@3
+  displayName: Maven ${{parameters.pomFile}}
+  inputs:
+    mavenPomFile: ${{parameters.pomFile}}
+    options: '-Dskiptests -Dmaven.test.skip.exec'
+    goals: package
+    sonarQubeRunAnalysis: true
+
+- task: SonarQubePublish@5
+  displayName: Publish Quality Gate Result

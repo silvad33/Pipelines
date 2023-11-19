@@ -1,0 +1,38 @@
+apiVersion: k6.io/v1alpha1
+kind: K6
+metadata:
+  name: ~testkey~
+spec:
+  parallelism: 4
+  arguments: --out cloud
+  script:
+    configMap:
+      name: ~testkey~
+      file: ~configMapFile~
+  runner:
+    affinity:
+      nodeAffinity:
+        preferredDuringSchedulingIgnoredDuringExecution:
+        - weight: 1
+          preference:
+            matchExpressions:
+            - key: kubernetes.azure.com/mode
+              operator: In
+              values:
+              - user
+            - key: kubernetes.io/os
+              operator: In
+              values:
+              - linux
+    env:
+    - name: PROJECT_ID
+      value: '~projectId~'
+    - name: TEST_NAME
+      value: '~testName~'
+    - name: API_AUTH_REQUEST_BODY
+      valueFrom:
+        secretKeyRef:
+          name: ~testkey~
+          key: apiAuthRequestBody
+    - name: API_AUTH_URL
+      value: '~apiAuthUrl~'

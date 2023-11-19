@@ -1,0 +1,151 @@
+variables:
+- group: Snyk
+- group: ServiceConnections
+- name: pomFile
+  value: BB8.UIMyordersAutomationTest/selenium/pom.xml
+- name: buildNumberPrefix
+  value: MyOrders.Automation.Test.CI
+- name: projectKey
+  value: BB8_MyOrdersUITests_AYZ1Pgkcmxn4zL3aqOrt
+- name: sonarQubeConnection
+  value: $(ServiceConnections.SonarQubeMyOrdersUITests)
+- name: breakSonarQubefailure
+  value: false
+- name: snkyOrganizationId
+  value: $(Snyk.OrgIdTesting)
+
+parameters:
+- name: myorders.siteUrl
+  type: string
+  default: uat
+
+schedules:
+- cron: "0 0 * * 1,2,3,4,5" # 7 PM EST = Midnight UTC
+  always: true
+  branches:
+    include:
+    - main
+
+resources:
+  repositories:
+  - repository: MyOrdersUITests
+    type: git
+    name: MyOrdersUITests
+    ref: myordersautomation
+    trigger:
+      branches:
+        include:
+        - myordersautomation
+  - repository: Pipelines
+    type: git
+    name: Pipelines
+    trigger:
+      branches:
+        include:
+        - main
+      paths:
+        include:
+        - UITesting/MyOrders-AutomationTest-CI.yml
+
+stages:
+- stage: SetBuildNumber
+  displayName: Set Build Number
+  jobs:
+  - job:
+    displayName: Set Build Number
+    pool:
+      vmImage: ubuntu-latest
+    steps:
+    - task: PowerShell@2
+      displayName: Set Build Number
+      inputs:
+        pwsh: true
+        targetType: inline
+        script: Write-Host "##vso[build.updatebuildnumber]$(buildNumberPrefix)-$(Build.BuildNumber)"
+- stage: CodeAnalysis
+  displayName: Code Analysis
+  jobs:
+  - job:
+    displayName: Run Snyk Scan
+    pool:
+      vmImage: ubuntu-latest
+    steps:
+    - checkout: MyOrdersUITests
+    - template: SnykScanners/_Templates/snykJava.yml@Pipelines
+      parameters:
+        snykConnection: $(ServiceConnections.SnykAuthentication)
+        snkyOrganizationId: $(snkyOrganizationId)
+        pomFile: $(pomFile)
+
+  - ${{ if ne(variables['Build.Reason'], 'PullRequest') }}:
+    - job:
+      displayName: Run SonarQube Analysis
+      pool:
+        vmImage: ubuntu-latest
+      steps:
+      - checkout: MyOrdersUITests
+      - template: SonarQubeScanners/_Templates/sonarQubeJava.yml@Pipelines
+        parameters:
+          sonarQubeConnection: $(sonarQubeConnection)
+          projectKey: $(projectKey)
+          breakSonarQubefailure: '${{ variables.breakSonarQubefailure }}'
+          pomFile: $(pomFile)
+  - ${{ else }}:
+    - job:
+      displayName: Run SonarQube Analysis
+      pool:
+        vmImage: ubuntu-latest
+      steps:
+      - checkout: MyOrdersUITests
+      - template: SonarQubeScanners/_Templates/sonarQubeJava.yml@Pipelines
+        parameters:
+          sonarQubeConnection: $(sonarQubeConnection)
+          projectKey: $(projectKey)
+          breakSonarQubefailure: '${{ variables.breakSonarQubefailure }}'
+          pomFile: $(pomFile)
+          prId: $(System.PullRequest.PullRequestId)
+          prSourceBranch: $(System.PullRequest.SourceBranch)
+          prTargetBranch: $(System.PullRequest.TargetBranch)
+
+- ${{ if ne(variables['Build.Reason'], 'PullRequest') }}:
+  - stage: RunSeleniumUITests
+    displayName: Run Selenium UI Tests
+    jobs:
+    - job:
+      displayName: Run Selenium UI Tests
+      pool:
+        name: QA Agents
+      steps:
+      - checkout: MyOrdersUITests
+
+      - task: NodeTool@0
+        displayName: Install Node.js
+        inputs:
+          versionSpec: 10.x
+
+      - task: Maven@3
+        displayName: Maven $(pomFile)
+        continueOnError: true
+        inputs:
+          mavenPomFile: $(pomFile)
+          options: 'clean install test -P featureTest -Dbrowser=chrome -X -Drp.enable=true'
+            
+      - task: AzureStaticWebApp@0
+        inputs:
+          app_location: './'
+          output_location: 'cucumber-reports'
+          azure_static_web_apps_api_token: '86a992877426a23492e60029933accfde9790906d2c2a4bc2c9e0045f9b2847f4-127b42a8-5111-409f-88f3-3c408f2f2db700f121897'
+      - task: PublishBuildArtifacts@1
+        displayName: Publish Outfile Files to ADO
+        inputs:
+          PathtoPublish: '$(Build.SourcesDirectory)/BB8.UIMyordersAutomationTest/selenium/target/surefire-reports'
+
+      - task: PublishCucumberReport@1
+        displayName: Publish Cucumber Report
+        inputs:
+          jsonDir: '$(Build.SourcesDirectory)/BB8.UIMyordersAutomationTest/selenium/target/cucumber'
+          outputPath: '$(Build.SourcesDirectory)/BB8.UIMyordersAutomationTest/selenium/target/cucumber'
+          theme: 'bootstrap'
+          reportSuiteAsScenarios: true
+          name: 'Cucumber report'
+          title: 'cucumber report'

@@ -1,0 +1,51 @@
+parameters:
+- name: postmanAPIKey
+  type: string
+  default: ''
+- name: apiAuthRequestBody
+  type: string
+  default: ''
+- name: apiAuthUrl
+  type: string
+  default: ''
+- name: collectionIds
+  type: string
+  default: ''
+- name: virtualUsers
+  type: string
+  default: '1'
+- name: environmentId
+  type: string
+  default: ''
+- name: jsPath
+  type: string
+  default: ''
+- name: jsFile
+  type: string
+  default: ''
+- name: artifactStagingDirectory
+  type: string
+  default: ''
+- name: collectionFile
+  type: string
+  default: ''
+- name: environmentFile
+  type: string
+  default: ''
+
+steps:
+
+- task: CmdLine@2
+  displayName: Test API Performance
+  inputs:
+    script: |
+      cd ${{parameters.jsPath}}
+      npm install
+      npm install jsonexport
+      access_token=$(curl -d '${{parameters.apiAuthRequestBody}}' --request POST '${{parameters.apiAuthUrl}}' -H 'Accept: application/json' -H 'Content-Type: application/json' | jq -r '.response.access_token')
+      node '${{parameters.jsFile}}' --artifactStagingDirectory ${{parameters.artifactStagingDirectory}} --virtualUsers ${{parameters.virtualUsers}} --accessToken "$access_token" --collectionFile ${{parameters.collectionFile}} --environmentFile ${{parameters.environmentFile}}
+
+- task: PublishBuildArtifacts@1
+  displayName: 'Publish Reports'
+  inputs:
+    PathtoPublish: ${{parameters.artifactStagingDirectory}}

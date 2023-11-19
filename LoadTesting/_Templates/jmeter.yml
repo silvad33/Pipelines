@@ -1,0 +1,164 @@
+parameters:
+- name: jmeterVersion
+  type: string
+  default: ''
+- name: jmeterScript
+  type: string
+  default: ''
+- name: workingDirectory
+  type: string
+  default: ''
+- name: jmeterReportsPath
+  type: string
+  default: ''
+- name: reportPortalEndpoint
+  type: string
+  default: ''
+- name: reportPortalProject
+  type: string
+  default: ''
+- name: reportPortalToken
+  type: string
+  default: ''
+- name: launchName
+  type: string
+  default: ''
+- name: launchDescription
+  type: string
+  default: ''
+- name: jmeterJTLFile
+  type: string
+  default: ''
+- name: statisticsFile
+  type: string
+  default: ''
+
+steps:
+
+- task: AlexandreGattiker.jmeter-tasks.custom-jmeter-installer-task.JMeterInstaller@0
+  displayName: Install JMeter ${{parameters.jmeterVersion}}
+  name: InstallJMeter
+  inputs:
+    jmeterVersion: ${{parameters.jmeterVersion}}
+    plugins: 'jpgc-casutg,jpgc-dummy,jpgc-ffw,jpgc-fifo,jpgc-functions,jpgc-json,jpgc-perfmon,jpgc-prmctl,jpgc-tst'
+
+- task: CmdLine@2
+  displayName: Run JMeter
+  inputs:
+    script: ${{parameters.jmeterScript}}
+    workingDirectory: ${{parameters.workingDirectory}}
+
+- ${{ if ne(parameters.reportPortalEndpoint, '') }}:
+
+  - task: PowerShell@2
+    displayName: Publish JMeter Report to Report Portal
+    inputs:
+      pwsh: true
+      targetType: inline
+      script: |
+        $launchName = "${{parameters.launchName}}"
+        $launchDescription = "${{parameters.launchDescription}}"
+        $rpEndpoint = "${{parameters.reportPortalEndpoint}}"
+        $rpProject = "${{parameters.reportPortalProject}}"
+        $token = "${{parameters.reportPortalToken}}"
+        $jtlFile = "${{parameters.jmeterJTLFile}}"
+        $statisticsFile = "${{parameters.statisticsFile}}"
+
+        $statistics = Get-Content -Raw $statisticsFile | ConvertFrom-Json
+        $results = Import-Csv -Path $jtlFile
+
+        $labels = $results | Select-Object -ExpandProperty label | Sort-Object | Get-Unique
+        $labels = $labels -replace ' ', ''
+
+        $header = @{ authorization = "bearer ${token}" }
+
+        foreach ($label in $labels) {
+
+            $transResults = $results.where({ (($_.label -replace ' ', '') -eq $label )})
+
+            $startTime = [DateTimeOffset]::UtcNow.ToUnixTimeMilliseconds()
+
+            $launchCreateBody = ConvertTo-Json @{
+                name = "${launchName}-${label}";
+                description = ${launchDescription};
+                startTime = ${startTime} -as [long];
+                mode = "DEFAULT";
+            }
+
+            $createLaunchUrl = "${rpEndpoint}/${rpProject}/launch"
+            $launch = Invoke-RestMethod -Uri $createLaunchUrl -Method Post -ContentType "application/json" -Headers $header -Body $launchCreateBody
+            $launchId = $launch.id
+
+            $launchlogMessage = $statistics.$label | Out-String
+
+            $launchLogCreateBody =  ConvertTo-Json  @{
+                launchUuid = ${launchId};
+                message = ${launchlogMessage};
+                time = ${startTime} -as [long];
+                level = "INFO";
+            }
+
+            $createlaunchLog = "${rpEndpoint}/${rpProject}/log/entry"
+            Invoke-RestMethod -Uri $createlaunchLog -Method Post -ContentType "application/json" -Headers $header -Body $launchLogCreateBody
+
+            foreach ($transResult in $transResults) {
+
+                $resultLabel = $transResult.label;
+                $resultDescription = $transResult.URL;
+                $testItemCreateBody =  ConvertTo-Json  @{
+                    launchUuid = ${launchId};
+                    name = ${resultLabel};
+                    startTime = ${startTime} -as [long];
+                    type="TEST";
+                    description=${resultDescription};
+                }
+
+                $createTestItemURL = "${rpEndpoint}/${rpProject}/item"
+                $testItem = Invoke-RestMethod -Uri $createTestItemURL -Method Post -ContentType "application/json"  -Headers $header -Body $testItemCreateBody
+                $testItemId = $testItem.id
+
+                $status = if($transResult.success -eq 'true') { "PASSED" } else { "FAILED" }
+                $testItemFinishBody = ConvertTo-Json @{
+                    endTime = ($startTime + $transResult.elapsed) -as [long];
+                    status = ${status};
+                }
+
+                $finishTestItemUrl = "${rpEndpoint}/${rpProject}/item/$testItemId"
+
+                Invoke-RestMethod -Uri $finishTestItemUrl -Method Put -ContentType "application/json" -Headers $header -Body $testItemFinishBody
+
+                $logStatus = if($transResult.success -eq 'true') { "info" } else { "error" }
+                $message = $transResult | Out-String
+                $logtime = $transResult.timeStamp
+                $logCreateBody =  ConvertTo-Json  @{
+                    launchUuid = ${launchId};
+                    message = ${message};
+                    time = ${logtime} -as [long];
+                    level = ${logStatus};
+                    itemUuid = ${testItemId}
+                }
+
+                $createLogURL = "${rpEndpoint}/${rpProject}/log/entry"
+                Invoke-RestMethod -Uri $createLogURL -Method Post -ContentType "application/json" -Headers $header -Body $logCreateBody
+            }
+
+            $endTime = [DateTimeOffset]::UtcNow.ToUnixTimeMilliseconds()
+
+            $launchFinishBody = ConvertTo-Json @{
+                endTime = ${endTime} -as [long];
+            }
+
+            $finishLaunchUrl = "${rpEndpoint}/${rpProject}/launch/${launchId}/finish"
+            Invoke-RestMethod -Uri $finishLaunchUrl -Method Put -ContentType "application/json" -Headers $header -Body $launchFinishBody
+        }
+
+- task: PublishBuildArtifacts@1
+  displayName: Publish JMeter Report to ADO
+  inputs:
+    PathtoPublish: ${{parameters.jmeterReportsPath}}
+
+- task: publishhtmlreport@1
+  displayName: Publish JMeter HTML Report to ADO
+  inputs:
+    htmlType: Jmeter
+    JmeterReportsPath: ${{parameters.jmeterReportsPath}}

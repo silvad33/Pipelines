@@ -1,0 +1,55 @@
+parameters:
+- name: snykConnection
+  type: string
+  default: ''
+- name: solution
+  type: string
+  default: ''
+- name: buildConfiguration
+  type: string
+  default: ''
+- name: vstsFeed
+  type: string
+  default: ''
+- name: dotNetVersion
+  type: string
+  default: "7.0.x"
+- name: failOnIssues
+  type: boolean
+  default: false
+- name: snkyOrganizationId
+  type: string
+  default: ''
+
+steps:
+
+- task: UseDotNet@2
+  displayName: Install .NET Core SDK
+  inputs:
+    version: ${{parameters.dotNetVersion}}
+    performMultiLevelLookup: true
+
+- task: DotNetCoreCLI@2
+  displayName: Restore Solution
+  inputs:
+    command: restore
+    projects: ${{parameters.solution}}
+    vstsFeed: ${{parameters.vstsFeed}}
+
+- task: VSBuild@1
+  displayName: Build Solution
+  inputs:
+    configuration: ${{parameters.buildConfiguration}}
+    solution: ${{parameters.solution}}
+    diagnosticsEnabled: True
+
+- task: SnykSecurityScan@1
+  displayName: Run Snyk Scan
+  inputs:
+    serviceConnectionEndpoint: ${{parameters.snykConnection}}
+    testType: app
+    severityThreshold: low
+    monitorWhen: always
+    failOnIssues: ${{parameters.failOnIssues}}
+    additionalArguments: --all-projects
+    organization: ${{parameters.snkyOrganizationId}}

@@ -1,0 +1,75 @@
+resources:
+  repositories:
+  - repository: BB8
+    type: git
+    name: BB8
+    ref: release/erp
+  - repository: Pipelines
+    type: git
+    name: Pipelines
+    trigger:
+      branches:
+        include:
+        - main
+      paths:
+        include:
+        - SonarQubeScanners/BB8ERPLegacySonarQubeScanner.yml
+
+variables:
+- group: ServiceConnections
+- group: Artifacts
+- name: solution
+  value: BB8.sln
+- name: buildConfiguration
+  value: Debug
+- name: projectKey
+  value: bb8-refs-heads-release-erp
+- name: dotNetVersion
+  value: 7.0.x
+- name: buildNumberPrefix
+  value: BB8.ERP.Legacy.SonarQube.Scanner
+- name: sonarQubeConnection
+  value: $(ServiceConnections.SonarQubeBB8ERP)
+- name: breakSonarQubefailure
+  value: false
+
+schedules:
+- cron: "0 18 * * 1,2,3,4,5"
+  always: true
+  branches:
+    include:
+    - release/erp
+
+stages:
+- stage: SetBuildNumber
+  displayName: Set Build Number
+  jobs:
+  - job:
+    displayName: Set Build Number
+    pool:
+      vmImage: ubuntu-latest
+    steps:
+    - task: PowerShell@2
+      displayName: Set Build Number
+      inputs:
+        pwsh: true
+        targetType: inline
+        script: Write-Host "##vso[build.updatebuildnumber]$(buildNumberPrefix)-$(Build.BuildNumber)"
+- stage: SonarQube
+  displayName: Run SonarQube Analysis
+  jobs:
+  - job:
+    displayName: Run SonarQube Analysis
+    pool:
+      vmImage: windows-latest
+    steps:
+    - checkout: BB8
+    - template: SonarQubeScanners/_Templates/sonarQube.yml@Pipelines
+      parameters:
+        sonarQubeConnection: $(sonarQubeConnection)
+        solution: $(solution)
+        buildConfiguration: $(buildConfiguration)
+        projectKey: $(projectKey)
+        vstsFeed: $(Artifacts.FeedId)
+        breakSonarQubefailure: '${{ variables.breakSonarQubefailure }}'
+        dotNetVersion: $(dotNetVersion)

@@ -1,0 +1,54 @@
+parameters:
+- name: snykConnection
+  type: string
+  default: ''
+- name: solution
+  type: string
+  default: ''
+- name: buildConfiguration
+  type: string
+  default: ''
+- name: vstsFeed
+  type: string
+  default: ''
+- name: buildPlatform
+  type: string
+  default: ''
+- name: failOnIssues
+  type: boolean
+  default: false
+- name: snkyOrganizationId
+  type: string
+  default: ''
+
+steps:
+
+- task: NuGetToolInstaller@1
+  displayName: Use NuGet
+
+- task: NuGetCommand@2
+  displayName: NuGet Restore
+  inputs:
+    vstsFeed: ${{parameters.vstsFeed}}
+    restoreSolution: ${{parameters.solution}}
+    command: restore
+
+- task: VSBuild@1
+  displayName: Build Solution
+  inputs:
+    configuration: ${{parameters.buildConfiguration}}
+    solution: ${{parameters.solution}}
+    msbuildArgs: '/p:SkipInvalidConfigurations=true'
+    platform: ${{parameters.buildPlatform}}
+
+- task: Snyk.snyk-security-scan.custom-build-release-task.SnykSecurityScan@1
+  displayName: Run Snyk Scan
+  continueOnError: true
+  inputs:
+    serviceConnectionEndpoint: ${{parameters.snykConnection}}
+    testType: app
+    severityThreshold: low
+    monitorWhen: always
+    failOnIssues: ${{parameters.failOnIssues}}
+    additionalArguments: --file=${{parameters.solution}}
+    organization: ${{parameters.snkyOrganizationId}}

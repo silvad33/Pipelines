@@ -1,0 +1,149 @@
+resources:
+  repositories:
+  - repository: Pipelines
+    type: git
+    name: Pipelines
+    trigger:
+      branches:
+        include:
+        - main
+      paths:
+        include:
+        - LoadTesting//K6/K6-UAT.yml
+        - LoadTesting//K6/scripts/testUAT.js
+        - LoadTesting//K6/k6sTemplate.yaml
+
+variables:
+- group: ServiceConnections
+- group: AKSDeployments
+- group: PostMan
+- name: buildNumberPrefix
+  value: K6Tests.UAT
+- name: kubernetesCluster
+  value: $(AKSDeployments.POC)
+- name: k6sTemplateYaml
+  value: LoadTesting/K6/k6sTemplate.yaml
+- name: secretTemplateYaml
+  value: LoadTesting/K6/secretTemplate.yaml
+- name: namespace
+  value: k6uat
+- name: testkey
+  value: k6uattest1
+- name: scriptFile
+  value: LoadTesting//K6/scripts/testUAT.js
+- name: configMapJsFile
+  value: testUAT.js
+- name: displayName
+  value: Test UAT
+- name: projectId
+  value: '3658988'
+- name: apiAuthRequestBody
+  value: $(PostMan.AuthRequestBody_UAT)
+- name: apiAuthUrl
+  value: https://phoenix-api-uat.presidio.com/v1.0/authentication/token
+
+stages:
+- stage: SetBuildNumber
+  displayName: Set Build Number
+  jobs:
+  - job:
+    displayName: Set Build Number
+    pool:
+      vmImage: ubuntu-latest
+    steps:
+    - task: PowerShell@2
+      displayName: Set Build Number
+      inputs:
+        pwsh: true
+        targetType: inline
+        script: Write-Host "##vso[build.updatebuildnumber]$(buildNumberPrefix)-$(Build.BuildNumber)"
+- stage:
+  displayName: Create K6 Resources
+  jobs:
+  - job:
+    displayName: Create K6 Resources
+    pool:
+      vmImage: ubuntu-latest
+    steps:
+      - checkout: Pipelines
+      - task: PowerShell@2
+        displayName: Replace Tokens for K6 Template YAML
+        inputs:
+          targetType: inline
+          pwsh: true
+          script: |
+            ((Get-Content -path $(k6sTemplateYaml) -Raw) -replace '~testkey~','$(testkey)') | Set-Content -Path $(testkey)-k6.yaml
+            ((Get-Content -path $(testkey)-k6.yaml -Raw) -replace '~configMapFile~','$(configMapJsFile)') | Set-Content -Path $(testkey)-k6.yaml
+            ((Get-Content -path $(testkey)-k6.yaml -Raw) -replace '~projectId~','$(projectId)') | Set-Content -Path $(testkey)-k6.yaml
+            ((Get-Content -path $(testkey)-k6.yaml -Raw) -replace '~testName~','$(displayName)') | Set-Content -Path $(testkey)-k6.yaml
+            ((Get-Content -path $(testkey)-k6.yaml -Raw) -replace '~apiAuthUrl~','$(apiAuthUrl)') | Set-Content -Path $(testkey)-k6.yaml
+            Get-Content -path $(testkey)-k6.yaml
+      - task: Kubernetes@1
+        displayName: Delete $(namespace) Namespace
+        inputs:
+          connectionType: 'Azure Resource Manager'
+          azureSubscriptionEndpoint: $(ServiceConnections.AzureResourceManager)
+          azureResourceGroup: $(AKSDeployments.AKSResourceGroup)
+          kubernetesCluster: $(kubernetesCluster)
+          command: delete
+          arguments: namespace $(namespace) --ignore-not-found
+      - task: Kubernetes@1
+        displayName: Create $(namespace) Namespace
+        inputs:
+          connectionType: 'Azure Resource Manager'
+          azureSubscriptionEndpoint: $(ServiceConnections.AzureResourceManager)
+          azureResourceGroup: $(AKSDeployments.AKSResourceGroup)
+          kubernetesCluster: $(kubernetesCluster)
+          command: create
+          arguments: namespace $(namespace)
+      - task: PowerShell@2
+        displayName: Prepare Auth Request Body
+        inputs:
+          targetType: 'inline'
+          script: |
+            $API_AUTH_REQUEST_BODY = '$(apiAuthRequestBody)'
+            $API_AUTH_REQUEST_BODY = [System.Convert]::ToBase64String([System.Text.Encoding]::UTF8.GetBytes($API_AUTH_REQUEST_BODY))
+            Write-Host "##vso[task.setvariable variable=API_AUTH_REQUEST_BODY]$API_AUTH_REQUEST_BODY"
+      - task: Kubernetes@1
+        displayName: Create $(displayName) Secret
+        inputs:
+          connectionType: 'Azure Resource Manager'
+          azureSubscriptionEndpoint: $(ServiceConnections.AzureResourceManager)
+          azureResourceGroup: $(AKSDeployments.AKSResourceGroup)
+          kubernetesCluster: $(kubernetesCluster)
+          namespace: $(namespace)
+          command: apply
+          useConfigurationFile: true
+          configurationType: inline
+          secretType: generic
+          inline: |
+            apiVersion: v1
+            kind: Secret
+            metadata:
+              name: $(testkey)
+            type: Opaque
+            data:
+              apiAuthRequestBody: $(API_AUTH_REQUEST_BODY)
+      - task: Kubernetes@1
+        displayName: Create $(displayName) ConfigMap
+        inputs:
+          connectionType: 'Azure Resource Manager'
+          azureSubscriptionEndpoint: $(ServiceConnections.AzureResourceManager)
+          azureResourceGroup: $(AKSDeployments.AKSResourceGroup)
+          kubernetesCluster: $(kubernetesCluster)
+          namespace: $(namespace)
+          forceUpdateConfigMap: true
+          configMapName: $(testkey)
+          configMapArguments: --from-file $(Build.SourcesDirectory)/$(scriptFile)
+      - task: Kubernetes@1
+        displayName: Create $(displayName) K6 Resource
+        inputs:
+          connectionType: 'Azure Resource Manager'
+          azureSubscriptionEndpoint: $(ServiceConnections.AzureResourceManager)
+          azureResourceGroup: $(AKSDeployments.AKSResourceGroup)
+          kubernetesCluster: $(kubernetesCluster)
+          namespace: $(namespace)
+          command: apply
+          useConfigurationFile: true
+          configuration: $(testkey)-k6.yaml
+          forceUpdate: true

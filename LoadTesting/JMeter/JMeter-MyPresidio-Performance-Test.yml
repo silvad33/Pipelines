@@ -1,0 +1,69 @@
+variables:
+- name: jmeterVersion
+  value: '5.4.2'
+- name: buildNumberPrefix
+  value: JMeter.Performance.Test
+- name: workingDirectory
+  value: $(Build.SourcesDirectory)/BB8.UIMyordersAutomationTest/jmeter
+- name: jmeterReportsPath
+  value: $(Build.SourcesDirectory)/BB8.UIMyordersAutomationTest/jmeter/reports01
+- name: jmeterScript
+  value: 'jmeter -n -t Mypresidio-performance-test-FInal.jmx -l results01.jtl -e -o $(jmeterReportsPath) -f'
+
+parameters:
+- name: system.teamProject
+  type: string
+  default: MyOrdersUITests
+
+resources:
+  repositories:
+  - repository: MyOrdersUITests
+    type: git
+    name: MyOrdersUITests
+    ref: myordersautomation
+    trigger:
+      branches:
+        include:
+        - myordersautomation
+  - repository: Pipelines
+    type: git
+    name: Pipelines
+    trigger:
+      branches:
+        include:
+        - main
+      paths:
+        include:
+        - LoadTesting/JMeter/JMeter-MyPresidio-Performance-Test.yml
+
+stages:
+- stage: SetBuildNumber
+  displayName: Set Build Number
+  jobs:
+  - job:
+    displayName: Set Build Number
+    pool:
+      vmImage: ubuntu-latest
+    steps:
+    - task: PowerShell@2
+      displayName: Set Build Number
+      inputs:
+        pwsh: true
+        targetType: inline
+        script: Write-Host "##vso[build.updatebuildnumber]$(buildNumberPrefix)-$(Build.BuildNumber)"
+- stage: RunJMeterPerformanceTests
+  displayName: Run JMeter Performance Tests
+  jobs:
+  - job:
+    displayName: Run JMeter Performance Tests
+    timeoutInMinutes: 360
+    pool:
+      name: QA Agents
+    steps:
+    - checkout: MyOrdersUITests
+    - template: LoadTesting\_Templates\jmeter.yml@Pipelines
+      parameters:
+        jmeterVersion: $(jmeterVersion)
+        jmeterScript: $(jmeterScript)
+        workingDirectory: $(workingDirectory)
+        jmeterReportsPath: $(jmeterReportsPath)

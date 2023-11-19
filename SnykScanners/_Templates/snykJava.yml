@@ -1,0 +1,36 @@
+parameters:
+- name: snykConnection
+  type: string
+  default: ''
+- name: failOnIssues
+  type: boolean
+  default: false
+- name: snkyOrganizationId
+  type: string
+  default: ''
+- name: pomFile
+  type: string
+  default: ''
+
+steps:
+
+- task: NodeTool@0
+  displayName: Install Node.js
+
+- task: Maven@3
+  displayName: Maven ${{parameters.pomFile}}
+  inputs:
+    mavenPomFile: ${{parameters.pomFile}}
+    options: '-Dskiptests -Dmaven.test.skip.exec'
+    goals: package
+
+- task: Snyk.snyk-security-scan.custom-build-release-task.SnykSecurityScan@1
+  displayName: Run Snyk Scan
+  inputs:
+    serviceConnectionEndpoint: ${{parameters.snykConnection}}
+    testType: app
+    severityThreshold: low
+    monitorWhen: never
+    failOnIssues: ${{parameters.failOnIssues}}
+    additionalArguments: --all-projects
+    organization: ${{parameters.snkyOrganizationId}}

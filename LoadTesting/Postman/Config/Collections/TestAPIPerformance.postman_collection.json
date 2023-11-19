@@ -1,0 +1,1703 @@
+{
+	"info": {
+		"_postman_id": "2b5df6d3-1bbe-4e07-9c1c-94659473aa6e",
+		"name": "TestAPIPerformance",
+		"schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json",
+		"_exporter_id": "24967717",
+		"_collection_link": "https://blue-firefly-503843.postman.co/workspace/Phoenix~d798cace-7adc-4963-b01f-27045d8581e9/collection/27847694-2b5df6d3-1bbe-4e07-9c1c-94659473aa6e?action=share&source=collection_link&creator=24967717"
+	},
+	"item": [
+		{
+			"name": "Subscription",
+			"item": [
+				{
+					"name": "SubscriptionInvoice",
+					"item": [
+						{
+							"name": "Search Subscription Invoice",
+							"event": [
+								{
+									"listen": "test",
+									"script": {
+										"exec": [
+											"pm.test(\"Status code is 200\", () => {\r",
+											"  pm.expect(pm.response.code).to.eql(200);\r",
+											"});"
+										],
+										"type": "text/javascript"
+									}
+								}
+							],
+							"request": {
+								"method": "POST",
+								"header": [
+									{
+										"key": "Authorization",
+										"value": "{{token_type}} {{access_token}}",
+										"type": "text"
+									}
+								],
+								"body": {
+									"mode": "raw",
+									"raw": "{\r\n    \"criteria\": {\r\n        \"companyID\": \"\",\r\n        \"subscriptionNumber\": 0,\r\n        \"documentNumber\": \"\",\r\n        \"customerOrderNumber\": \"\",\r\n        \"invoiceDateFrom\": \"\",\r\n        \"invoiceDateTo\": \"\",\r\n        \"showInStorefront\": 0,\r\n        \"status\": [],\r\n        \"documentTypeCode\": 0,\r\n        \"createdDateFrom\": \"\",\r\n        \"createdDateTo\": \"\",\r\n        \"createdBy\": \"\",\r\n        \"paymentStatus\": -1\r\n    },\r\n    \"start\": 1,\r\n    \"records\": 10,\r\n    \"sortBy\": 0\r\n}",
+									"options": {
+										"raw": {
+											"language": "json"
+										}
+									}
+								},
+								"url": {
+									"raw": "{{apiBaseUrl}}/v1.0/subscriptionInvoice/search",
+									"host": [
+										"{{apiBaseUrl}}"
+									],
+									"path": [
+										"v1.0",
+										"subscriptionInvoice",
+										"search"
+									]
+								}
+							},
+							"response": []
+						},
+						{
+							"name": "PostToErp",
+							"event": [
+								{
+									"listen": "test",
+									"script": {
+										"exec": [
+											"pm.test(\"Status code is 200\", () => {\r",
+											"  pm.expect(pm.response.code).to.eql(200);\r",
+											"});"
+										],
+										"type": "text/javascript"
+									}
+								}
+							],
+							"request": {
+								"method": "POST",
+								"header": [
+									{
+										"key": "Authorization",
+										"value": "{{token_type}} {{access_token}}",
+										"type": "text"
+									}
+								],
+								"body": {
+									"mode": "raw",
+									"raw": "",
+									"options": {
+										"raw": {
+											"language": "json"
+										}
+									}
+								},
+								"url": {
+									"raw": "{{apiBaseUrl}}/v1.0/subscriptionInvoice/postToErp?id=0e5adc8e-eb28-4d50-8849-2ace3e4cd575",
+									"host": [
+										"{{apiBaseUrl}}"
+									],
+									"path": [
+										"v1.0",
+										"subscriptionInvoice",
+										"postToErp"
+									],
+									"query": [
+										{
+											"key": "id",
+											"value": "0e5adc8e-eb28-4d50-8849-2ace3e4cd575"
+										}
+									]
+								}
+							},
+							"response": []
+						},
+						{
+							"name": "Update Subscription Invoice",
+							"event": [
+								{
+									"listen": "test",
+									"script": {
+										"exec": [
+											"pm.test(\"Status code is 200\", () => {\r",
+											"  pm.expect(pm.response.code).to.eql(200);\r",
+											"});"
+										],
+										"type": "text/javascript"
+									}
+								}
+							],
+							"request": {
+								"method": "PUT",
+								"header": [
+									{
+										"key": "Authorization",
+										"value": "{{token_type}} {{access_token}}",
+										"type": "text"
+									}
+								],
+								"body": {
+									"mode": "raw",
+									"raw": "{\r\n    \"date\": \"2023-09-12\",\r\n    \"title\": \"Year 5 - Cisco Flex Collaboration Enterprise Agree\",\r\n    \"grandTotal\": 0,\r\n    \"customerInvoiceNotes\": \"\",\r\n    \"items\": [\r\n        {\r\n            \"lineNumber\": 1,\r\n            \"quantity\": 2,\r\n            \"unitPrice\": 0,\r\n            \"extendedPrice\": 0,\r\n            \"duration\": 14,\r\n            \"comments\": \"\",\r\n            \"billingStartDate\": \"2023-09-13T00:00:00\",\r\n            \"billingEndDate\": \"2023-10-20T00:00:00\"\r\n        },\r\n        {\r\n            \"lineNumber\": 2,\r\n            \"quantity\": 0.1,\r\n            \"unitPrice\": 0,\r\n            \"extendedPrice\": 0,\r\n            \"duration\": 1,\r\n            \"comments\": null,\r\n            \"billingStartDate\": \"2023-09-05T00:00:00\",\r\n            \"billingEndDate\": \"2023-09-15T00:00:00\"\r\n        }\r\n    ],\r\n    \"id\": \"dfe04d72-6b79-4cb8-afaa-56a886f7dfb9\",\r\n    \"postingDate\": \"2023-09-13\"\r\n}",
+									"options": {
+										"raw": {
+											"language": "json"
+										}
+									}
+								},
+								"url": {
+									"raw": "{{apiBaseUrl}}/v1.0/subscriptioninvoice/update",
+									"host": [
+										"{{apiBaseUrl}}"
+									],
+									"path": [
+										"v1.0",
+										"subscriptioninvoice",
+										"update"
+									]
+								}
+							},
+							"response": []
+						},
+						{
+							"name": "ListDocument",
+							"event": [
+								{
+									"listen": "test",
+									"script": {
+										"exec": [
+											"pm.test(\"Status code is 200\", () => {\r",
+											"  pm.expect(pm.response.code).to.eql(200);\r",
+											"});"
+										],
+										"type": "text/javascript"
+									}
+								}
+							],
+							"request": {
+								"method": "GET",
+								"header": [
+									{
+										"key": "Authorization",
+										"value": "{{token_type}} {{access_token}}",
+										"type": "text"
+									}
+								],
+								"url": {
+									"raw": "{{apiBaseUrl}}/v1.0/subscriptionInvoice/listdocument?id=1026891e-e070-4c68-b908-c479e747b99f&documentType=205&start=1&records=50&sortBy=0",
+									"host": [
+										"{{apiBaseUrl}}"
+									],
+									"path": [
+										"v1.0",
+										"subscriptionInvoice",
+										"listdocument"
+									],
+									"query": [
+										{
+											"key": "id",
+											"value": "1026891e-e070-4c68-b908-c479e747b99f"
+										},
+										{
+											"key": "documentType",
+											"value": "205"
+										},
+										{
+											"key": "start",
+											"value": "1"
+										},
+										{
+											"key": "records",
+											"value": "50"
+										},
+										{
+											"key": "sortBy",
+											"value": "0"
+										}
+									]
+								}
+							},
+							"response": []
+						},
+						{
+							"name": "Get  Subscription Invoice",
+							"event": [
+								{
+									"listen": "test",
+									"script": {
+										"exec": [
+											"pm.test(\"Status code is 200\", () => {\r",
+											"  pm.expect(pm.response.code).to.eql(200);\r",
+											"});"
+										],
+										"type": "text/javascript"
+									}
+								}
+							],
+							"request": {
+								"method": "GET",
+								"header": [
+									{
+										"key": "Authorization",
+										"value": "{{token_type}} {{access_token}}",
+										"type": "text"
+									}
+								],
+								"url": {
+									"raw": "{{apiBaseUrl}}/v1.0/subscriptionInvoice/get?id=1026891e-e070-4c68-b908-c479e747b99f&scope=header,items",
+									"host": [
+										"{{apiBaseUrl}}"
+									],
+									"path": [
+										"v1.0",
+										"subscriptionInvoice",
+										"get"
+									],
+									"query": [
+										{
+											"key": "id",
+											"value": "1026891e-e070-4c68-b908-c479e747b99f"
+										},
+										{
+											"key": "scope",
+											"value": "header,items"
+										}
+									]
+								}
+							},
+							"response": []
+						},
+						{
+							"name": "ValidateNumber",
+							"event": [
+								{
+									"listen": "test",
+									"script": {
+										"exec": [
+											"pm.test(\"Status code is 200\", () => {\r",
+											"  pm.expect(pm.response.code).to.eql(200);\r",
+											"});"
+										],
+										"type": "text/javascript"
+									}
+								}
+							],
+							"request": {
+								"method": "GET",
+								"header": [
+									{
+										"key": "Authorization",
+										"value": "{{token_type}} {{access_token}}",
+										"type": "text"
+									}
+								],
+								"url": {
+									"raw": "{{apiBaseUrl}}/v1.0/subscriptionInvoice/validateNumber?id=039cc875-d0ce-4856-869f-6960a6a28f4f&vendorInvoiceNumber=Auto_qa_XJJJ3YA06D",
+									"host": [
+										"{{apiBaseUrl}}"
+									],
+									"path": [
+										"v1.0",
+										"subscriptionInvoice",
+										"validateNumber"
+									],
+									"query": [
+										{
+											"key": "id",
+											"value": "039cc875-d0ce-4856-869f-6960a6a28f4f"
+										},
+										{
+											"key": "vendorInvoiceNumber",
+											"value": "Auto_qa_XJJJ3YA06D"
+										}
+									]
+								}
+							},
+							"response": []
+						},
+						{
+							"name": "ListAudit",
+							"event": [
+								{
+									"listen": "test",
+									"script": {
+										"exec": [
+											"pm.test(\"Status code is 200\", () => {\r",
+											"  pm.expect(pm.response.code).to.eql(200);\r",
+											"});"
+										],
+										"type": "text/javascript"
+									}
+								}
+							],
+							"request": {
+								"method": "GET",
+								"header": [
+									{
+										"key": "Authorization",
+										"value": "{{token_type}} {{access_token}}",
+										"type": "text"
+									}
+								],
+								"url": {
+									"raw": "{{apiBaseUrl}}/v1.0/SubscriptionInvoice/listAudit?documentID=dfe04d72-6b79-4cb8-afaa-56a886f7dfb9&documentType=203&start=1&records=-1&sortBy=0",
+									"host": [
+										"{{apiBaseUrl}}"
+									],
+									"path": [
+										"v1.0",
+										"SubscriptionInvoice",
+										"listAudit"
+									],
+									"query": [
+										{
+											"key": "documentID",
+											"value": "dfe04d72-6b79-4cb8-afaa-56a886f7dfb9"
+										},
+										{
+											"key": "documentType",
+											"value": "203"
+										},
+										{
+											"key": "start",
+											"value": "1"
+										},
+										{
+											"key": "records",
+											"value": "-1"
+										},
+										{
+											"key": "sortBy",
+											"value": "0"
+										}
+									]
+								}
+							},
+							"response": []
+						}
+					]
+				},
+				{
+					"name": "VendorInvoice",
+					"item": [
+						{
+							"name": "ListDocument",
+							"event": [
+								{
+									"listen": "test",
+									"script": {
+										"exec": [
+											"pm.test(\"Status code is 200\", () => {\r",
+											"  pm.expect(pm.response.code).to.eql(200);\r",
+											"});"
+										],
+										"type": "text/javascript"
+									}
+								}
+							],
+							"request": {
+								"method": "GET",
+								"header": [
+									{
+										"key": "Authorization",
+										"value": "{{token_type}} {{access_token}}",
+										"type": "text"
+									}
+								],
+								"url": {
+									"raw": "{{apiBaseUrl}}/v1.0/subscriptionVendorInvoice/listdocument?id=f904caf2-c938-499f-bcf1-576e53a104bc&documentType=204&start=1&records=50&sortBy=0",
+									"host": [
+										"{{apiBaseUrl}}"
+									],
+									"path": [
+										"v1.0",
+										"subscriptionVendorInvoice",
+										"listdocument"
+									],
+									"query": [
+										{
+											"key": "id",
+											"value": "f904caf2-c938-499f-bcf1-576e53a104bc"
+										},
+										{
+											"key": "documentType",
+											"value": "204"
+										},
+										{
+											"key": "start",
+											"value": "1"
+										},
+										{
+											"key": "records",
+											"value": "50"
+										},
+										{
+											"key": "sortBy",
+											"value": "0"
+										}
+									]
+								}
+							},
+							"response": []
+						},
+						{
+							"name": "ListRelatedDocument",
+							"event": [
+								{
+									"listen": "test",
+									"script": {
+										"exec": [
+											"pm.test(\"Status code is 200\", () => {\r",
+											"  pm.expect(pm.response.code).to.eql(200);\r",
+											"});"
+										],
+										"type": "text/javascript"
+									}
+								}
+							],
+							"request": {
+								"method": "GET",
+								"header": [
+									{
+										"key": "Authorization",
+										"value": "{{token_type}} {{access_token}}",
+										"type": "text"
+									}
+								],
+								"url": {
+									"raw": "{{apiBaseUrl}}/v1.0/subscriptionInvoice/ListRelatedDocument?start=1&sortBy=0&subscriptionvendorinvoiceid=f904caf2-c938-499f-bcf1-576e53a104bc&records=-1",
+									"host": [
+										"{{apiBaseUrl}}"
+									],
+									"path": [
+										"v1.0",
+										"subscriptionInvoice",
+										"ListRelatedDocument"
+									],
+									"query": [
+										{
+											"key": "start",
+											"value": "1"
+										},
+										{
+											"key": "sortBy",
+											"value": "0"
+										},
+										{
+											"key": "subscriptionvendorinvoiceid",
+											"value": "f904caf2-c938-499f-bcf1-576e53a104bc"
+										},
+										{
+											"key": "records",
+											"value": "-1"
+										}
+									]
+								}
+							},
+							"response": []
+						},
+						{
+							"name": "ListAudit",
+							"event": [
+								{
+									"listen": "test",
+									"script": {
+										"exec": [
+											"pm.test(\"Status code is 200\", () => {\r",
+											"  pm.expect(pm.response.code).to.eql(200);\r",
+											"});"
+										],
+										"type": "text/javascript"
+									}
+								}
+							],
+							"request": {
+								"method": "GET",
+								"header": [
+									{
+										"key": "Authorization",
+										"value": "{{token_type}} {{access_token}}",
+										"type": "text"
+									}
+								],
+								"url": {
+									"raw": "{{apiBaseUrl}}/v1.0/subscriptionVendorInvoice/listaudit?documentID=f904caf2-c938-499f-bcf1-576e53a104bc&documentType=202&start=1&records=-1&sortBy=0",
+									"host": [
+										"{{apiBaseUrl}}"
+									],
+									"path": [
+										"v1.0",
+										"subscriptionVendorInvoice",
+										"listaudit"
+									],
+									"query": [
+										{
+											"key": "documentID",
+											"value": "f904caf2-c938-499f-bcf1-576e53a104bc"
+										},
+										{
+											"key": "documentType",
+											"value": "202"
+										},
+										{
+											"key": "start",
+											"value": "1"
+										},
+										{
+											"key": "records",
+											"value": "-1"
+										},
+										{
+											"key": "sortBy",
+											"value": "0"
+										}
+									]
+								}
+							},
+							"response": []
+						},
+						{
+							"name": "Update Vendor Invoice",
+							"event": [
+								{
+									"listen": "test",
+									"script": {
+										"exec": [
+											"pm.test(\"Status code is 200\", () => {\r",
+											"  pm.expect(pm.response.code).to.eql(200);\r",
+											"});"
+										],
+										"type": "text/javascript"
+									}
+								}
+							],
+							"request": {
+								"method": "PUT",
+								"header": [
+									{
+										"key": "Authorization",
+										"value": "{{token_type}} {{access_token}}",
+										"type": "text"
+									}
+								],
+								"body": {
+									"mode": "raw",
+									"raw": "{\r\n    \"date\": \"2023-09-12\",\r\n    \"title\": \"Year 5 - Cisco Flex Collaboration Enterprise Agree\",\r\n    \"grandTotal\": 0,\r\n    \"customerInvoiceNotes\": \"\",\r\n    \"items\": [\r\n        {\r\n            \"lineNumber\": 1,\r\n            \"quantity\": 2,\r\n            \"unitPrice\": 0,\r\n            \"extendedPrice\": 0,\r\n            \"duration\": 14,\r\n            \"comments\": \"\",\r\n            \"billingStartDate\": \"2023-09-13T00:00:00\",\r\n            \"billingEndDate\": \"2023-10-20T00:00:00\"\r\n        },\r\n        {\r\n            \"lineNumber\": 2,\r\n            \"quantity\": 0.1,\r\n            \"unitPrice\": 0,\r\n            \"extendedPrice\": 0,\r\n            \"duration\": 1,\r\n            \"comments\": null,\r\n            \"billingStartDate\": \"2023-09-05T00:00:00\",\r\n            \"billingEndDate\": \"2023-09-15T00:00:00\"\r\n        }\r\n    ],\r\n    \"id\": \"dfe04d72-6b79-4cb8-afaa-56a886f7dfb9\",\r\n    \"postingDate\": \"2023-09-13\"\r\n}",
+									"options": {
+										"raw": {
+											"language": "json"
+										}
+									}
+								},
+								"url": {
+									"raw": "{{apiBaseUrl}}/v1.0/subscriptioninvoice/update",
+									"host": [
+										"{{apiBaseUrl}}"
+									],
+									"path": [
+										"v1.0",
+										"subscriptioninvoice",
+										"update"
+									]
+								}
+							},
+							"response": []
+						},
+						{
+							"name": "GetUsageData",
+							"event": [
+								{
+									"listen": "test",
+									"script": {
+										"exec": [
+											"pm.test(\"Status code is 200\", () => {\r",
+											"  pm.expect(pm.response.code).to.eql(200);\r",
+											"});"
+										],
+										"type": "text/javascript"
+									}
+								}
+							],
+							"request": {
+								"method": "GET",
+								"header": [
+									{
+										"key": "Authorization",
+										"value": "{{token_type}} {{access_token}}",
+										"type": "text"
+									}
+								],
+								"url": {
+									"raw": "{{apiBaseUrl}}/v1.0/subscriptionVendorInvoice/getUsageData?id=c688595b-a105-4421-893f-81b32c51eeca",
+									"host": [
+										"{{apiBaseUrl}}"
+									],
+									"path": [
+										"v1.0",
+										"subscriptionVendorInvoice",
+										"getUsageData"
+									],
+									"query": [
+										{
+											"key": "id",
+											"value": "c688595b-a105-4421-893f-81b32c51eeca"
+										}
+									]
+								}
+							},
+							"response": []
+						},
+						{
+							"name": "Get Vendor Invoice",
+							"event": [
+								{
+									"listen": "test",
+									"script": {
+										"exec": [
+											"pm.test(\"Status code is 200\", () => {\r",
+											"  pm.expect(pm.response.code).to.eql(200);\r",
+											"});"
+										],
+										"type": "text/javascript"
+									}
+								}
+							],
+							"request": {
+								"method": "GET",
+								"header": [
+									{
+										"key": "Authorization",
+										"value": "{{token_type}} {{access_token}}",
+										"type": "text"
+									}
+								],
+								"url": {
+									"raw": "{{apiBaseUrl}}/v1.0/subscriptionVendorInvoice/get?id=c688595b-a105-4421-893f-81b32c51eeca&scope=header",
+									"host": [
+										"{{apiBaseUrl}}"
+									],
+									"path": [
+										"v1.0",
+										"subscriptionVendorInvoice",
+										"get"
+									],
+									"query": [
+										{
+											"key": "id",
+											"value": "c688595b-a105-4421-893f-81b32c51eeca"
+										},
+										{
+											"key": "scope",
+											"value": "header"
+										}
+									]
+								}
+							},
+							"response": []
+						},
+						{
+							"name": "Get Customer Usage",
+							"event": [
+								{
+									"listen": "test",
+									"script": {
+										"exec": [
+											"pm.test(\"Status code is 200\", () => {\r",
+											"  pm.expect(pm.response.code).to.eql(200);\r",
+											"});"
+										],
+										"type": "text/javascript"
+									}
+								}
+							],
+							"request": {
+								"method": "GET",
+								"header": [
+									{
+										"key": "Authorization",
+										"value": "{{token_type}} {{access_token}}",
+										"type": "text"
+									}
+								],
+								"url": {
+									"raw": "{{apiBaseUrl}}/v1.0/subscriptionVendorInvoice/getCustomerUsage?id=e42f0831-b98e-4ae3-ab94-85c458a27ca3",
+									"host": [
+										"{{apiBaseUrl}}"
+									],
+									"path": [
+										"v1.0",
+										"subscriptionVendorInvoice",
+										"getCustomerUsage"
+									],
+									"query": [
+										{
+											"key": "id",
+											"value": "e42f0831-b98e-4ae3-ab94-85c458a27ca3"
+										}
+									]
+								}
+							},
+							"response": []
+						},
+						{
+							"name": "Get Vendor Related Items",
+							"event": [
+								{
+									"listen": "test",
+									"script": {
+										"exec": [
+											"pm.test(\"Status code is 200\", () => {\r",
+											"  pm.expect(pm.response.code).to.eql(200);\r",
+											"});"
+										],
+										"type": "text/javascript"
+									}
+								}
+							],
+							"request": {
+								"method": "GET",
+								"header": [
+									{
+										"key": "Authorization",
+										"value": "{{token_type}} {{access_token}}",
+										"type": "text"
+									}
+								],
+								"url": {
+									"raw": "{{apiBaseUrl}}/v1.0/subscriptionVendorInvoice/getvendorrelateditems?id=e42f0831-b98e-4ae3-ab94-85c458a27ca3&subscriptionId=e78caf8b-1645-47b4-8742-1e7d8439f58a&lineNumber=1&sourceDocumentID=a6c3021c-fd4f-4e78-89e7-fec6cc69ac0e&sourceDocumentType=PurchaseOrder",
+									"host": [
+										"{{apiBaseUrl}}"
+									],
+									"path": [
+										"v1.0",
+										"subscriptionVendorInvoice",
+										"getvendorrelateditems"
+									],
+									"query": [
+										{
+											"key": "id",
+											"value": "e42f0831-b98e-4ae3-ab94-85c458a27ca3"
+										},
+										{
+											"key": "subscriptionId",
+											"value": "e78caf8b-1645-47b4-8742-1e7d8439f58a"
+										},
+										{
+											"key": "lineNumber",
+											"value": "1"
+										},
+										{
+											"key": "sourceDocumentID",
+											"value": "a6c3021c-fd4f-4e78-89e7-fec6cc69ac0e"
+										},
+										{
+											"key": "sourceDocumentType",
+											"value": "PurchaseOrder"
+										}
+									]
+								}
+							},
+							"response": []
+						},
+						{
+							"name": "Search Vendor Invoice",
+							"event": [
+								{
+									"listen": "test",
+									"script": {
+										"exec": [
+											"pm.test(\"Status code is 200\", () => {\r",
+											"  pm.expect(pm.response.code).to.eql(200);\r",
+											"});"
+										],
+										"type": "text/javascript"
+									}
+								}
+							],
+							"request": {
+								"method": "POST",
+								"header": [
+									{
+										"key": "Authorization",
+										"value": "{{token_type}} {{access_token}}",
+										"type": "text"
+									}
+								],
+								"body": {
+									"mode": "raw",
+									"raw": "{\r\n    \"criteria\": {\r\n        \"companyID\": \"\",\r\n        \"subscriptionNumber\": 0,\r\n        \"documentNumber\": \"\",\r\n        \"customerOrderNumber\": \"\",\r\n        \"invoiceDateFrom\": \"\",\r\n        \"invoiceDateTo\": \"\",\r\n        \"showInStorefront\": 0,\r\n        \"status\": [],\r\n        \"documentTypeCode\": 0,\r\n        \"createdDateFrom\": \"\",\r\n        \"createdDateTo\": \"\",\r\n        \"createdBy\": \"\",\r\n        \"paymentStatus\": -1\r\n    },\r\n    \"start\": 1,\r\n    \"records\": 10,\r\n    \"sortBy\": 0\r\n}",
+									"options": {
+										"raw": {
+											"language": "json"
+										}
+									}
+								},
+								"url": {
+									"raw": "{{apiBaseUrl}}/v1.0/subscriptionvendorinvoice/search",
+									"host": [
+										"{{apiBaseUrl}}"
+									],
+									"path": [
+										"v1.0",
+										"subscriptionvendorinvoice",
+										"search"
+									]
+								}
+							},
+							"response": []
+						},
+						{
+							"name": "Unlink Item",
+							"event": [
+								{
+									"listen": "test",
+									"script": {
+										"exec": [
+											"pm.test(\"Status code is 200\", () => {\r",
+											"  pm.expect(pm.response.code).to.eql(200);\r",
+											"});"
+										],
+										"type": "text/javascript"
+									}
+								}
+							],
+							"request": {
+								"method": "POST",
+								"header": [
+									{
+										"key": "Authorization",
+										"value": "{{token_type}} {{access_token}}",
+										"type": "text"
+									}
+								],
+								"body": {
+									"mode": "raw",
+									"raw": "{}",
+									"options": {
+										"raw": {
+											"language": "json"
+										}
+									}
+								},
+								"url": {
+									"raw": "{{apiBaseUrl}}/v1.0/subscriptionVendorInvoice/unlinkitem?id=e42f0831-b98e-4ae3-ab94-85c458a27ca3&lineNumber=1",
+									"host": [
+										"{{apiBaseUrl}}"
+									],
+									"path": [
+										"v1.0",
+										"subscriptionVendorInvoice",
+										"unlinkitem"
+									],
+									"query": [
+										{
+											"key": "id",
+											"value": "e42f0831-b98e-4ae3-ab94-85c458a27ca3"
+										},
+										{
+											"key": "lineNumber",
+											"value": "1"
+										}
+									]
+								}
+							},
+							"response": []
+						},
+						{
+							"name": "Link Item",
+							"event": [
+								{
+									"listen": "test",
+									"script": {
+										"exec": [
+											"pm.test(\"Status code is 200\", () => {\r",
+											"  pm.expect(pm.response.code).to.eql(200);\r",
+											"});"
+										],
+										"type": "text/javascript"
+									}
+								}
+							],
+							"request": {
+								"method": "POST",
+								"header": [
+									{
+										"key": "Authorization",
+										"value": "{{token_type}} {{access_token}}",
+										"type": "text"
+									}
+								],
+								"body": {
+									"mode": "raw",
+									"raw": "{}",
+									"options": {
+										"raw": {
+											"language": "json"
+										}
+									}
+								},
+								"url": {
+									"raw": "{{apiBaseUrl}}/v1.0/subscriptionVendorInvoice/linkitem?id=e42f0831-b98e-4ae3-ab94-85c458a27ca3&linenumber=1&subscriptionId=e78caf8b-1645-47b4-8742-1e7d8439f58a&subscriptionlinenumber=1&sourceDocumentID=a6c3021c-fd4f-4e78-89e7-fec6cc69ac0e&sourceDocumentType=PurchaseOrder",
+									"host": [
+										"{{apiBaseUrl}}"
+									],
+									"path": [
+										"v1.0",
+										"subscriptionVendorInvoice",
+										"linkitem"
+									],
+									"query": [
+										{
+											"key": "id",
+											"value": "e42f0831-b98e-4ae3-ab94-85c458a27ca3"
+										},
+										{
+											"key": "linenumber",
+											"value": "1"
+										},
+										{
+											"key": "subscriptionId",
+											"value": "e78caf8b-1645-47b4-8742-1e7d8439f58a"
+										},
+										{
+											"key": "subscriptionlinenumber",
+											"value": "1"
+										},
+										{
+											"key": "sourceDocumentID",
+											"value": "a6c3021c-fd4f-4e78-89e7-fec6cc69ac0e"
+										},
+										{
+											"key": "sourceDocumentType",
+											"value": "PurchaseOrder"
+										}
+									]
+								}
+							},
+							"response": []
+						},
+						{
+							"name": "Delete Vendor Invoice",
+							"event": [
+								{
+									"listen": "test",
+									"script": {
+										"exec": [
+											"pm.test(\"Status code is 200\", () => {\r",
+											"  pm.expect(pm.response.code).to.eql(200);\r",
+											"});"
+										],
+										"type": "text/javascript"
+									}
+								}
+							],
+							"request": {
+								"method": "DELETE",
+								"header": [
+									{
+										"key": "Authorization",
+										"value": "{{token_type}} {{access_token}}",
+										"type": "text"
+									}
+								],
+								"body": {
+									"mode": "raw",
+									"raw": "",
+									"options": {
+										"raw": {
+											"language": "json"
+										}
+									}
+								},
+								"url": {
+									"raw": "{{apiBaseUrl}}/v1.0/subscriptionVendorInvoice/delete?id=f904caf2-c938-499f-bcf1-576e53a104bc",
+									"host": [
+										"{{apiBaseUrl}}"
+									],
+									"path": [
+										"v1.0",
+										"subscriptionVendorInvoice",
+										"delete"
+									],
+									"query": [
+										{
+											"key": "id",
+											"value": "f904caf2-c938-499f-bcf1-576e53a104bc"
+										}
+									]
+								}
+							},
+							"response": []
+						}
+					]
+				},
+				{
+					"name": "ChangeRequest",
+					"item": [
+						{
+							"name": "PreOrderValidation",
+							"event": [
+								{
+									"listen": "test",
+									"script": {
+										"exec": [
+											"pm.test(\"Status code is 200\", () => {\r",
+											"  pm.expect(pm.response.code).to.eql(200);\r",
+											"});"
+										],
+										"type": "text/javascript"
+									}
+								}
+							],
+							"request": {
+								"method": "POST",
+								"header": [
+									{
+										"key": "Authorization",
+										"value": "{{token_type}} {{access_token}}",
+										"type": "text"
+									}
+								],
+								"body": {
+									"mode": "raw",
+									"raw": "",
+									"options": {
+										"raw": {
+											"language": "json"
+										}
+									}
+								},
+								"url": {
+									"raw": "{{apiBaseUrl}}/v1.0/SubscriptionChangeRequest/sendPreOrderValidation?id=a54c28e4-feaa-47d2-bcb9-0427eb540ee3",
+									"host": [
+										"{{apiBaseUrl}}"
+									],
+									"path": [
+										"v1.0",
+										"SubscriptionChangeRequest",
+										"sendPreOrderValidation"
+									],
+									"query": [
+										{
+											"key": "id",
+											"value": "a54c28e4-feaa-47d2-bcb9-0427eb540ee3"
+										}
+									]
+								}
+							},
+							"response": []
+						}
+					]
+				}
+			]
+		},
+		{
+			"name": "Order Get",
+			"event": [
+				{
+					"listen": "test",
+					"script": {
+						"exec": [
+							"pm.test(\"Status code is 200\", () => {\r",
+							"  pm.expect(pm.response.code).to.eql(200);\r",
+							"});"
+						],
+						"type": "text/javascript"
+					}
+				}
+			],
+			"request": {
+				"method": "GET",
+				"header": [
+					{
+						"key": "Authorization",
+						"value": "{{token_type}} {{access_token}}",
+						"type": "text"
+					}
+				],
+				"url": {
+					"raw": "{{apiBaseUrl}}/v1.0/order/Get?id=D2C27463-1E0F-4774-9D41-121B1C29ED18&includeCanceled=true&excludeZeroTotal=true",
+					"host": [
+						"{{apiBaseUrl}}"
+					],
+					"path": [
+						"v1.0",
+						"order",
+						"Get"
+					],
+					"query": [
+						{
+							"key": "id",
+							"value": "D2C27463-1E0F-4774-9D41-121B1C29ED18"
+						},
+						{
+							"key": "includeCanceled",
+							"value": "true"
+						},
+						{
+							"key": "excludeZeroTotal",
+							"value": "true"
+						}
+					]
+				}
+			},
+			"response": []
+		},
+		{
+			"name": "User Me",
+			"event": [
+				{
+					"listen": "test",
+					"script": {
+						"exec": [
+							"pm.test(\"Status code is 200\", () => {\r",
+							"  pm.expect(pm.response.code).to.eql(200);\r",
+							"});"
+						],
+						"type": "text/javascript"
+					}
+				}
+			],
+			"request": {
+				"method": "GET",
+				"header": [
+					{
+						"key": "Authorization",
+						"value": "{{token_type}} {{access_token}}",
+						"type": "text"
+					}
+				],
+				"url": {
+					"raw": "{{apiBaseUrl}}/v1.0/user/me",
+					"host": [
+						"{{apiBaseUrl}}"
+					],
+					"path": [
+						"v1.0",
+						"user",
+						"me"
+					]
+				}
+			},
+			"response": []
+		},
+		{
+			"name": "subscriptionChangeRequest",
+			"event": [
+				{
+					"listen": "test",
+					"script": {
+						"exec": [
+							"pm.test(\"Status code is 200\", () => {\r",
+							"  pm.expect(pm.response.code).to.eql(200);\r",
+							"});"
+						],
+						"type": "text/javascript"
+					}
+				}
+			],
+			"request": {
+				"method": "POST",
+				"header": [
+					{
+						"key": "Authorization",
+						"value": "{{token_type}} {{access_token}}",
+						"type": "text"
+					}
+				],
+				"body": {
+					"mode": "raw",
+					"raw": "{\r\n    \"criteria\": {\r\n        \"number\": \"\",\r\n        \"status\": [],\r\n        \"requestedStartDateFrom\": \"\",\r\n        \"requestedStartDateTo\": \"\",\r\n        \"endDateFrom\": \"\",\r\n        \"endDateTo\": \"\",\r\n        \"billingModel\": 0,\r\n        \"changeType\": 0,\r\n        \"createdDateFrom\": \"\",\r\n        \"createdDateTo\": \"\",\r\n        \"createdBy\": \"\"\r\n    },\r\n    \"start\": 1,\r\n    \"records\": 10,\r\n    \"sortBy\": 0\r\n}",
+					"options": {
+						"raw": {
+							"language": "json"
+						}
+					}
+				},
+				"url": {
+					"raw": "{{apiBaseUrl}}/v1.0/subscriptionChangeRequest/search",
+					"host": [
+						"{{apiBaseUrl}}"
+					],
+					"path": [
+						"v1.0",
+						"subscriptionChangeRequest",
+						"search"
+					]
+				}
+			},
+			"response": []
+		},
+		{
+			"name": "Subscription Get",
+			"event": [
+				{
+					"listen": "test",
+					"script": {
+						"exec": [
+							"pm.test(\"Status code is 200\", () => {\r",
+							"  pm.expect(pm.response.code).to.eql(200);\r",
+							"});"
+						],
+						"type": "text/javascript"
+					}
+				}
+			],
+			"request": {
+				"method": "GET",
+				"header": [
+					{
+						"key": "Authorization",
+						"value": "{{token_type}} {{access_token}}",
+						"type": "text"
+					}
+				],
+				"url": {
+					"raw": "{{apiBaseUrl}}/v1.0/subscription/get?id=c6ebd756-a2d2-444b-9387-2611fb118fdb",
+					"host": [
+						"{{apiBaseUrl}}"
+					],
+					"path": [
+						"v1.0",
+						"subscription",
+						"get"
+					],
+					"query": [
+						{
+							"key": "id",
+							"value": "c6ebd756-a2d2-444b-9387-2611fb118fdb"
+						}
+					]
+				}
+			},
+			"response": []
+		},
+		{
+			"name": "Enumeration List For Dropdown Get",
+			"event": [
+				{
+					"listen": "test",
+					"script": {
+						"exec": [
+							"pm.test(\"Status code is 200\", () => {\r",
+							"  pm.expect(pm.response.code).to.eql(200);\r",
+							"});"
+						],
+						"type": "text/javascript"
+					}
+				}
+			],
+			"request": {
+				"method": "GET",
+				"header": [
+					{
+						"key": "Authorization",
+						"value": "{{token_type}} {{access_token}}",
+						"type": "text"
+					}
+				],
+				"url": {
+					"raw": "{{apiBaseUrl}}/v1.0/enumeration/listfordropdown?typeName=SubscriptionChangeType",
+					"host": [
+						"{{apiBaseUrl}}"
+					],
+					"path": [
+						"v1.0",
+						"enumeration",
+						"listfordropdown"
+					],
+					"query": [
+						{
+							"key": "typeName",
+							"value": "SubscriptionChangeType"
+						}
+					]
+				}
+			},
+			"response": []
+		},
+		{
+			"name": "Part Number List Get",
+			"event": [
+				{
+					"listen": "test",
+					"script": {
+						"exec": [
+							"pm.test(\"Status code is 200\", () => {\r",
+							"  pm.expect(pm.response.code).to.eql(200);\r",
+							"});"
+						],
+						"type": "text/javascript"
+					}
+				}
+			],
+			"request": {
+				"method": "GET",
+				"header": [
+					{
+						"key": "Authorization",
+						"value": "{{token_type}} {{access_token}}",
+						"type": "text"
+					}
+				],
+				"url": {
+					"raw": "{{apiBaseUrl}}/v1.0/partnumberlist/getbytype?type=1",
+					"host": [
+						"{{apiBaseUrl}}"
+					],
+					"path": [
+						"v1.0",
+						"partnumberlist",
+						"getbytype"
+					],
+					"query": [
+						{
+							"key": "type",
+							"value": "1"
+						}
+					]
+				}
+			},
+			"response": []
+		},
+		{
+			"name": "Subscription Vendor Invoice",
+			"event": [
+				{
+					"listen": "test",
+					"script": {
+						"exec": [
+							"pm.test(\"Status code is 200\", () => {\r",
+							"  pm.expect(pm.response.code).to.eql(200);\r",
+							"});"
+						],
+						"type": "text/javascript"
+					}
+				}
+			],
+			"request": {
+				"method": "GET",
+				"header": [
+					{
+						"key": "Authorization",
+						"value": "{{token_type}} {{access_token}}",
+						"type": "text"
+					}
+				],
+				"url": {
+					"raw": "{{apiBaseUrl}}/v1.0/subscriptionvendorinvoice/get?id=e5c6633f-62a4-4cf0-aaea-046b80b8dd5a",
+					"host": [
+						"{{apiBaseUrl}}"
+					],
+					"path": [
+						"v1.0",
+						"subscriptionvendorinvoice",
+						"get"
+					],
+					"query": [
+						{
+							"key": "id",
+							"value": "e5c6633f-62a4-4cf0-aaea-046b80b8dd5a"
+						}
+					]
+				}
+			},
+			"response": []
+		},
+		{
+			"name": "Subscription Change Request",
+			"event": [
+				{
+					"listen": "test",
+					"script": {
+						"exec": [
+							"pm.test(\"Status code is 200\", () => {\r",
+							"  pm.expect(pm.response.code).to.eql(200);\r",
+							"});"
+						],
+						"type": "text/javascript"
+					}
+				}
+			],
+			"request": {
+				"method": "GET",
+				"header": [
+					{
+						"key": "Authorization",
+						"value": "{{token_type}} {{access_token}}",
+						"type": "text"
+					}
+				],
+				"url": {
+					"raw": "{{apiBaseUrl}}/v1.0/subscriptionChangeRequest/get?id=4574c9c1-6056-47c2-8928-dccc6196cedc",
+					"host": [
+						"{{apiBaseUrl}}"
+					],
+					"path": [
+						"v1.0",
+						"subscriptionChangeRequest",
+						"get"
+					],
+					"query": [
+						{
+							"key": "id",
+							"value": "4574c9c1-6056-47c2-8928-dccc6196cedc"
+						}
+					]
+				}
+			},
+			"response": []
+		},
+		{
+			"name": "Subscription Change Request Get Deltas",
+			"event": [
+				{
+					"listen": "test",
+					"script": {
+						"exec": [
+							"pm.test(\"Status code is 200\", () => {\r",
+							"  pm.expect(pm.response.code).to.eql(200);\r",
+							"});"
+						],
+						"type": "text/javascript"
+					}
+				}
+			],
+			"request": {
+				"method": "GET",
+				"header": [
+					{
+						"key": "Authorization",
+						"value": "{{token_type}} {{access_token}}",
+						"type": "text"
+					}
+				],
+				"url": {
+					"raw": "{{apiBaseUrl}}/v1.0/subscriptionChangeRequest/getDeltaList?id=c185b64e-d8d5-4bcc-ac61-0357f91bcd72",
+					"host": [
+						"{{apiBaseUrl}}"
+					],
+					"path": [
+						"v1.0",
+						"subscriptionChangeRequest",
+						"getDeltaList"
+					],
+					"query": [
+						{
+							"key": "id",
+							"value": "c185b64e-d8d5-4bcc-ac61-0357f91bcd72"
+						}
+					]
+				}
+			},
+			"response": []
+		},
+		{
+			"name": "Subscription Vendor Invoice List Document",
+			"event": [
+				{
+					"listen": "test",
+					"script": {
+						"exec": [
+							"pm.test(\"Status code is 200\", () => {\r",
+							"  pm.expect(pm.response.code).to.eql(200);\r",
+							"});"
+						],
+						"type": "text/javascript"
+					}
+				}
+			],
+			"request": {
+				"method": "GET",
+				"header": [
+					{
+						"key": "Authorization",
+						"value": "{{token_type}} {{access_token}}",
+						"type": "text"
+					}
+				],
+				"url": {
+					"raw": "{{apiBaseUrl}}/v1.0/subscriptionVendorInvoice/listdocument?id=487e8584-04a9-443d-bc9d-2ce3c08674b5&documentType=202&start=1&records=50&sortBy=0",
+					"host": [
+						"{{apiBaseUrl}}"
+					],
+					"path": [
+						"v1.0",
+						"subscriptionVendorInvoice",
+						"listdocument"
+					],
+					"query": [
+						{
+							"key": "id",
+							"value": "487e8584-04a9-443d-bc9d-2ce3c08674b5"
+						},
+						{
+							"key": "documentType",
+							"value": "202"
+						},
+						{
+							"key": "start",
+							"value": "1"
+						},
+						{
+							"key": "records",
+							"value": "50"
+						},
+						{
+							"key": "sortBy",
+							"value": "0"
+						}
+					]
+				}
+			},
+			"response": []
+		},
+		{
+			"name": "Company",
+			"event": [
+				{
+					"listen": "test",
+					"script": {
+						"exec": [
+							"pm.test(\"Status code is 200\", () => {\r",
+							"  pm.expect(pm.response.code).to.eql(200);\r",
+							"});"
+						],
+						"type": "text/javascript"
+					}
+				}
+			],
+			"request": {
+				"method": "GET",
+				"header": [
+					{
+						"key": "Authorization",
+						"value": "{{token_type}} {{access_token}}",
+						"type": "text"
+					}
+				],
+				"url": {
+					"raw": "{{apiBaseUrl}}/v1.0/company/get?id=79C00B63-6CB7-44D6-884A-A1B3A2C40FF9",
+					"host": [
+						"{{apiBaseUrl}}"
+					],
+					"path": [
+						"v1.0",
+						"company",
+						"get"
+					],
+					"query": [
+						{
+							"key": "id",
+							"value": "79C00B63-6CB7-44D6-884A-A1B3A2C40FF9"
+						}
+					]
+				}
+			},
+			"response": []
+		},
+		{
+			"name": "User",
+			"event": [
+				{
+					"listen": "test",
+					"script": {
+						"exec": [
+							"pm.test(\"Status code is 200\", () => {\r",
+							"  pm.expect(pm.response.code).to.eql(200);\r",
+							"});"
+						],
+						"type": "text/javascript"
+					}
+				}
+			],
+			"request": {
+				"method": "GET",
+				"header": [
+					{
+						"key": "Authorization",
+						"value": "{{token_type}} {{access_token}}",
+						"type": "text"
+					}
+				],
+				"url": {
+					"raw": "{{apiBaseUrl}}/v1.0/user/get",
+					"host": [
+						"{{apiBaseUrl}}"
+					],
+					"path": [
+						"v1.0",
+						"user",
+						"get"
+					]
+				}
+			},
+			"response": []
+		},
+		{
+			"name": "GetDashboard",
+			"event": [
+				{
+					"listen": "test",
+					"script": {
+						"exec": [
+							"pm.test(\"Status code is 200\", () => {\r",
+							"  pm.expect(pm.response.code).to.eql(200);\r",
+							"});"
+						],
+						"type": "text/javascript"
+					}
+				}
+			],
+			"request": {
+				"method": "GET",
+				"header": [
+					{
+						"key": "Authorization",
+						"value": "{{token_type}} {{access_token}}",
+						"type": "text"
+					}
+				],
+				"url": {
+					"raw": "{{apiBaseUrl}}/v1.0/subscriptionReport/GetDashboard",
+					"host": [
+						"{{apiBaseUrl}}"
+					],
+					"path": [
+						"v1.0",
+						"subscriptionReport",
+						"GetDashboard"
+					]
+				}
+			},
+			"response": []
+		}
+	],
+	"event": [
+		{
+			"listen": "prerequest",
+			"script": {
+				"type": "text/javascript",
+				"exec": [
+					""
+				]
+			}
+		},
+		{
+			"listen": "test",
+			"script": {
+				"type": "text/javascript",
+				"exec": [
+					""
+				]
+			}
+		}
+	],
+	"variable": [
+		{
+			"key": "apiBaseUrl",
+			"value": "https://phoenix-api-qa1.presidio.com"
+		}
+	]
+}
